@@ -1,0 +1,34 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4">
+  <div class="eyebrow">لوحة الإدارة الرئيسية</div>
+  <h2 class="mb-2">متابعة تشغيلية وقيادية موحدة</h2>
+  <p class="mb-0 text-muted">تعرض مؤشرات المهام والمخاطر والتقارير والملاحظات على مستوى جميع المناطق مع دعم التحليل واتخاذ القرار.</p>
+</div>
+<div class="stats-grid mb-4">
+  <div class="stat-card"><span>إجمالي المهام</span><strong>{{ stats.missions_total }}</strong></div>
+  <div class="stat-card"><span>المهام المفتوحة</span><strong>{{ stats.missions_open }}</strong></div>
+  <div class="stat-card"><span>تقارير المناطق بانتظار المركزية</span><strong>{{ stats.regions_reports_pending }}</strong></div>
+  <div class="stat-card"><span>الملاحظات المفتوحة</span><strong>{{ stats.observations_open }}</strong></div>
+  <div class="stat-card"><span>الملاحظات الحرجة/العالية</span><strong>{{ stats.critical_observations }}</strong></div>
+</div>
+<div class="stats-grid mb-4">
+  <div class="stat-card"><span>الالتزام بالخطة السنوية</span><strong>{{ stats.plan_commitment_pct }}%</strong><div class="kpi-bar mt-2"><span style="width:{{ stats.plan_commitment_pct }}%"></span></div></div>
+  <div class="stat-card"><span>متوسط زمن الإغلاق</span><strong>{{ stats.avg_closure_days }}</strong></div>
+  <div class="stat-card"><span>أعلى المناطق متابعة</span><strong>{{ top_regions|length }}</strong></div>
+  <div class="stat-card"><span>جهات مختصة نشطة</span><strong>{{ top_departments|length }}</strong></div>
+  <div class="stat-card"><span>نطاق التغطية</span><strong>جميع المناطق</strong></div>
+</div>
+<div class="chart-grid mb-4">
+  <div class="chart-card"><h6>مستوى المخاطر حسب المنطقة</h6><canvas data-chart='{{ {"type":"bar","labels":charts["risk_by_region"]["labels"],"values":charts["risk_by_region"]["values"],"label":"مؤشر الخطورة"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>حالات الملاحظات</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["obs_status"]["labels"],"values":charts["obs_status"]["values"]}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>اتجاه الملاحظات شهريًا</h6><canvas data-chart='{{ {"type":"line","labels":charts["trend_monthly"]["labels"],"values":charts["trend_monthly"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>توزيع مستويات الخطورة</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["obs_severity"]["labels"],"values":charts["obs_severity"]["values"]}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>أعلى السجون بالملاحظات المفتوحة</h6><canvas data-chart='{{ {"type":"bar","labels":charts["open_by_prison"]["labels"],"values":charts["open_by_prison"]["values"],"label":"ملاحظات مفتوحة"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>توزيع الملاحظات حسب الجهة المختصة</h6><canvas data-chart='{{ {"type":"bar","labels":charts["departments_load"]["labels"],"values":charts["departments_load"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-6"><div class="table-card p-0 overflow-hidden"><div class="p-3 border-bottom"><h5 class="mb-0">أكثر المناطق تسجيلًا للملاحظات</h5></div><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>المنطقة</th><th>عدد الملاحظات</th></tr></thead><tbody>{% for name,count in top_regions %}<tr><td>{{ name }}</td><td>{{ count }}</td></tr>{% else %}<tr><td colspan="2" class="text-center text-muted">لا توجد بيانات</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-6"><div class="table-card p-0 overflow-hidden"><div class="p-3 border-bottom"><h5 class="mb-0">أكثر الجهات المختصة ورودًا</h5></div><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>الإدارة</th><th>عدد الملاحظات</th></tr></thead><tbody>{% for name,count in top_departments %}<tr><td>{{ name }}</td><td>{{ count }}</td></tr>{% else %}<tr><td colspan="2" class="text-center text-muted">لا توجد بيانات</td></tr>{% endfor %}</tbody></table></div></div></div>
+</div>
+{% endblock %}

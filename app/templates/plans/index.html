@@ -1,0 +1,5 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="page-head"><h2>الخطة السنوية</h2></div>
+<div class="panel"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>العنوان</th><th>السنة</th><th>عدد البنود</th><th></th></tr></thead><tbody>{% for plan in plans %}<tr><td>{{ plan.title }}</td><td>{{ plan.year }}</td><td>{{ plan.items|length }}</td><td><a class="btn btn-sm btn-outline-success" href="{{ url_for('plans.detail', plan_id=plan.id) }}">فتح</a></td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

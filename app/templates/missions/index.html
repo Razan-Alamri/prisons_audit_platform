@@ -1,0 +1,268 @@
+{% extends 'layouts/base.html' %}
+{% block title %}المهام والجولات{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <h2 class="mb-0">المهام والجولات</h2>
+
+  {% if current_user.role in ['central_admin','central_operator','central_director'] %}
+  <a class="btn btn-success" href="{{ url_for('missions.create') }}">
+    <i class="bi bi-plus-circle"></i>
+    <span>إنشاء مهمة</span>
+  </a>
+  {% endif %}
+</div>
+
+<div class="stats-grid mb-4 stats-grid--compact">
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-kanban"></i></div>
+    <span>إجمالي المهام</span>
+    <strong>{{ stats.total }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-plus-square"></i></div>
+    <span>المهام الجديدة</span>
+    <strong>{{ stats.new }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-hourglass-split"></i></div>
+    <span>قيد التنفيذ</span>
+    <strong>{{ stats.in_progress }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-flag"></i></div>
+    <span>المهام الحرجة</span>
+    <strong>{{ stats.critical }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-send-check"></i></div>
+    <span>الجاهزة للمدير العام</span>
+    <strong>{{ stats.ready_for_dg }}</strong>
+  </div>
+</div>
+
+<div class="panel panel-wide listing-panel mb-4">
+  <form method="get" class="listing-filters auto-submit-form">
+    <div class="listing-filter listing-filter--search">
+      <label class="form-label">بحث</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input
+          class="form-control"
+          type="text"
+          name="search"
+          value="{{ filters.search }}"
+          placeholder="ابحث بالعنوان أو المرجع">
+      </div>
+    </div>
+
+    <div class="listing-filter">
+      <label class="form-label">النموذج</label>
+      <select class="form-select" name="template_id">
+        <option value="">الكل</option>
+        {% for template in templates %}
+        <option value="{{ template.id }}" {% if filters.template_id == template.id|string %}selected{% endif %}>
+          {{ template.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="listing-filter">
+      <label class="form-label">التصنيف</label>
+      <select class="form-select" name="mission_classification">
+        <option value="">الكل</option>
+        <option value="annual_plan" {% if filters.mission_classification == 'annual_plan' %}selected{% endif %}>{{ MISSION_CLASSIFICATION_LABELS['annual_plan'] }}</option>
+        <option value="quarterly_plan" {% if filters.mission_classification == 'quarterly_plan' %}selected{% endif %}>{{ MISSION_CLASSIFICATION_LABELS['quarterly_plan'] }}</option>
+        <option value="follow_up" {% if filters.mission_classification == 'follow_up' %}selected{% endif %}>{{ MISSION_CLASSIFICATION_LABELS['follow_up'] }}</option>
+        <option value="ad_hoc" {% if filters.mission_classification == 'ad_hoc' %}selected{% endif %}>{{ MISSION_CLASSIFICATION_LABELS['ad_hoc'] }}</option>
+      </select>
+    </div>
+
+    <div class="listing-filter">
+      <label class="form-label">الأولوية</label>
+      <select class="form-select" name="priority_level">
+        <option value="">الكل</option>
+        <option value="normal" {% if filters.priority_level == 'normal' %}selected{% endif %}>{{ PRIORITY_LEVEL_LABELS['normal'] }}</option>
+        <option value="medium" {% if filters.priority_level == 'medium' %}selected{% endif %}>{{ PRIORITY_LEVEL_LABELS['medium'] }}</option>
+        <option value="high" {% if filters.priority_level == 'high' %}selected{% endif %}>{{ PRIORITY_LEVEL_LABELS['high'] }}</option>
+        <option value="critical" {% if filters.priority_level == 'critical' %}selected{% endif %}>{{ PRIORITY_LEVEL_LABELS['critical'] }}</option>
+      </select>
+    </div>
+
+    <div class="listing-filter">
+      <label class="form-label">الحالة</label>
+      <select class="form-select" name="status">
+        <option value="">الكل</option>
+        <option value="created" {% if filters.status == 'created' %}selected{% endif %}>{{ MISSION_STATUS_LABELS['created'] }}</option>
+        <option value="in_progress" {% if filters.status == 'in_progress' %}selected{% endif %}>{{ MISSION_STATUS_LABELS['in_progress'] }}</option>
+        <option value="under_central_review" {% if filters.status == 'under_central_review' %}selected{% endif %}>{{ MISSION_STATUS_LABELS['under_central_review'] }}</option>
+        <option value="awaiting_remediation" {% if filters.status == 'awaiting_remediation' %}selected{% endif %}>{{ MISSION_STATUS_LABELS['awaiting_remediation'] }}</option>
+        <option value="ready_for_dg" {% if filters.status == 'ready_for_dg' %}selected{% endif %}>{{ MISSION_STATUS_LABELS['ready_for_dg'] }}</option>
+        <option value="closed" {% if filters.status == 'closed' %}selected{% endif %}>{{ MISSION_STATUS_LABELS['closed'] }}</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="panel panel-wide listing-panel">
+  <div class="listing-table-wrap">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle listing-table">
+        <thead>
+          <tr>
+            <th>المهمة</th>
+            <th>النموذج</th>
+            <th>التصنيف</th>
+            <th>الأولوية</th>
+            <th>الحالة</th>
+            <th>المناطق</th>
+            <th>المرجع</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for mission in missions %}
+          <tr>
+            <td>
+              <a class="fw-bold text-decoration-none listing-link" href="{{ url_for('missions.detail', mission_id=mission.id) }}">
+                <i class="bi bi-kanban me-1"></i>
+                {{ mission.title }}
+              </a>
+              {% if mission.task_instructions %}
+              <div class="small text-muted mt-1">
+                {{ mission.task_instructions[:110] }}{% if mission.task_instructions|length > 110 %}...{% endif %}
+              </div>
+              {% endif %}
+            </td>
+
+            <td>{{ mission.template.name }}</td>
+
+<td>
+  {% if mission.mission_classification == 'annual_plan' %}
+  <span class="badge-soft badge-classification-annual">
+    <i class="bi bi-calendar-event"></i>
+    {{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification) }}
+  </span>
+  {% elif mission.mission_classification == 'quarterly_plan' %}
+  <span class="badge-soft badge-classification-quarterly">
+    <i class="bi bi-calendar3"></i>
+    {{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification) }}
+  </span>
+  {% elif mission.mission_classification == 'follow_up' %}
+  <span class="badge-soft badge-classification-followup">
+    <i class="bi bi-arrow-repeat"></i>
+    {{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification) }}
+  </span>
+  {% else %}
+  <span class="badge-soft badge-classification-adhoc">
+    <i class="bi bi-kanban"></i>
+    {{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification) }}
+  </span>
+  {% endif %}
+</td>
+
+<td>
+  {% if mission.priority_level == 'critical' %}
+  <span class="badge-soft badge-priority-critical">
+    <i class="bi bi-exclamation-octagon-fill"></i>
+    {{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}
+  </span>
+  {% elif mission.priority_level == 'high' %}
+  <span class="badge-soft badge-priority-high">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    {{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}
+  </span>
+  {% elif mission.priority_level == 'medium' %}
+  <span class="badge-soft badge-priority-medium">
+    <i class="bi bi-flag-fill"></i>
+    {{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}
+  </span>
+  {% else %}
+  <span class="badge-soft badge-priority-normal">
+    <i class="bi bi-dash-circle"></i>
+    {{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}
+  </span>
+  {% endif %}
+</td>
+
+<td>
+  {% if mission.status == 'created' %}
+  <span class="badge-soft badge-status-created">
+    <i class="bi bi-plus-circle"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% elif mission.status == 'in_progress' %}
+  <span class="badge-soft badge-status-progress">
+    <i class="bi bi-hourglass-split"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% elif mission.status == 'under_central_review' %}
+  <span class="badge-soft badge-status-review">
+    <i class="bi bi-search"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% elif mission.status == 'awaiting_remediation' %}
+  <span class="badge-soft badge-status-remediation">
+    <i class="bi bi-tools"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% elif mission.status == 'ready_for_dg' %}
+  <span class="badge-soft badge-status-ready">
+    <i class="bi bi-send-check"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% elif mission.status == 'closed' %}
+  <span class="badge-soft badge-status-closed">
+    <i class="bi bi-check2-circle"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% else %}
+  <span class="badge-soft badge-status">
+    <i class="bi bi-circle"></i>
+    {{ MISSION_STATUS_LABELS.get(mission.status, mission.overall_status_label()) }}
+  </span>
+  {% endif %}
+</td>
+
+            <td>{{ mission.regions|length }}</td>
+            <td><span class="text-muted">{{ mission.reference_no }}</span></td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-5">لا توجد مهام مطابقة للخيارات الحالية.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.querySelector('.auto-submit-form');
+  if (!form) return;
+
+  const selects = form.querySelectorAll('select');
+  const searchInput = form.querySelector('input[name="search"]');
+
+  selects.forEach((el) => {
+    el.addEventListener('change', function () {
+      form.submit();
+    });
+  });
+
+  let searchTimer = null;
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => form.submit(), 450);
+    });
+  }
+});
+</script>
+{% endblock %}

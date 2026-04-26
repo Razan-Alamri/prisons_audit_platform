@@ -1,0 +1,694 @@
+{% extends 'layouts/base.html' %}
+{% block title %}إنشاء مهمة{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="mb-1 d-flex align-items-center gap-2">
+      <i class="bi bi-plus-circle text-success"></i>
+      <span>إنشاء مهمة</span>
+    </h2>
+    <p class="text-muted mb-0">إنشاء تكليف جديد وتحديد المناطق والسجون والمنفذين بطريقة واضحة ومنظمة.</p>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="row g-4" id="missionCreateForm">
+  <div class="col-12 col-xl-6">
+    <div class="panel panel-form mission-create-panel h-100">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-card-text text-success"></i>
+        <span>البيانات العامة</span>
+      </h5>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label required-label">عنوان المهمة</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-pencil-square"></i></span>
+            <input
+              class="form-control"
+              name="title"
+              id="mission_title"
+              value="{{ form_data.title or '' }}"
+              placeholder="يُقترح تلقائيًا بعد اختيار النموذج والتصنيف"
+              required>
+          </div>
+          <div class="form-text">يتم اقتراح عنوان أولي تلقائيًا ويمكن تعديله عند الحاجة.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required-label">النموذج</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-ui-checks-grid"></i></span>
+            <select class="form-select" name="template_id" id="template_id" required>
+              <option value="">— اختر —</option>
+              {% for t in templates %}
+              <option value="{{ t.id }}" data-name="{{ t.name }}" {% if form_data.template_id == t.id|string %}selected{% endif %}>
+                {{ t.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required-label">أولوية التنفيذ</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-flag"></i></span>
+            <select class="form-select" name="priority_level" id="priority_level" required>
+              <option value="">— اختر —</option>
+              <option value="normal" {% if form_data.priority_level == 'normal' %}selected{% endif %}>عادية</option>
+              <option value="medium" {% if form_data.priority_level == 'medium' %}selected{% endif %}>متوسطة</option>
+              <option value="high" {% if form_data.priority_level == 'high' %}selected{% endif %}>عالية</option>
+              <option value="critical" {% if form_data.priority_level == 'critical' %}selected{% endif %}>حرجة</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required-label">تصنيف المهمة</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-diagram-2"></i></span>
+            <select class="form-select" name="mission_classification" id="mission_classification" required>
+              <option value="">— اختر —</option>
+              <option value="annual_plan" {% if form_data.mission_classification == 'annual_plan' %}selected{% endif %}>خطة سنوية</option>
+              <option value="quarterly_plan" {% if form_data.mission_classification == 'quarterly_plan' %}selected{% endif %}>خطة ربع سنوية</option>
+              <option value="follow_up" {% if form_data.mission_classification == 'follow_up' %}selected{% endif %}>متابعة</option>
+              <option value="ad_hoc" {% if form_data.mission_classification == 'ad_hoc' %}selected{% endif %}>مهمة غير مجدولة</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required-label">تاريخ التنفيذ المستهدف</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-calendar-event"></i></span>
+            <input type="date" class="form-control" name="planned_date" value="{{ form_data.planned_date or '' }}" required>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required-label">تاريخ الاستحقاق</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-calendar-check"></i></span>
+            <input type="date" class="form-control" name="due_date" value="{{ form_data.due_date or '' }}" required>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">تعليمات التكليف</label>
+          <div class="input-group">
+            <span class="input-group-text align-items-start pt-3"><i class="bi bi-journal-text"></i></span>
+            <textarea class="form-control" rows="4" name="task_instructions">{{ form_data.task_instructions or '' }}</textarea>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">مرفقات التكليف</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-paperclip"></i></span>
+            <input type="file" class="form-control" name="attachments" multiple>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-6">
+    <div class="panel panel-form mission-create-panel h-100 mission-create-right-panel">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-diagram-3 text-success"></i>
+        <span>النطاق والإسناد</span>
+      </h5>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label required-label">نطاق السجون</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-building-lock"></i></span>
+            <select class="form-select" name="global_prison_scope" id="globalPrisonScope" required>
+              <option value="">— اختر —</option>
+              <option value="defer" {% if form_data.global_prison_scope == 'defer' %}selected{% endif %}>يترك لمدير المنطقة</option>
+              <option value="fixed" {% if form_data.global_prison_scope == 'fixed' %}selected{% endif %}>يحدد مسبقًا</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label required-label">آلية الإسناد</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person-gear"></i></span>
+            <select class="form-select" name="assignment_mode" id="assignment_mode" required>
+              <option value="">— اختر —</option>
+              <option value="region_manager_selects" {% if form_data.assignment_mode == 'region_manager_selects' %}selected{% endif %}>يترك لمدير شعبة المراجعة بالمنطقة</option>
+              <option value="central_defined" {% if form_data.assignment_mode == 'central_defined' %}selected{% endif %}>يحدد مسبقًا من إدارة المراجعة الداخلية</option>
+              <option value="central_with_region_completion" {% if form_data.assignment_mode == 'central_with_region_completion' %}selected{% endif %}>تحديد مبدئي مع استكمال من المنطقة</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label required-label">المناطق المستهدفة</label>
+
+          <div class="custom-multi" id="regionsMulti">
+            <button type="button" class="custom-multi__trigger" id="regionsTrigger">
+              <span id="regionsTriggerText">اختر المناطق المستهدفة</span>
+              <i class="bi bi-chevron-down"></i>
+            </button>
+
+            <div class="custom-multi__menu" id="regionsMenu">
+              <div class="custom-multi__search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="regionsSearch" placeholder="ابحث عن منطقة">
+              </div>
+
+              <div class="custom-multi__options" id="regionsOptions">
+                {% for region in regions %}
+                <label class="custom-option" data-name="{{ region.name }}">
+                  <div class="custom-option__text">
+                    <strong>{{ region.name }}</strong>
+                    <small>{{ region.prisons|length }} سجن</small>
+                  </div>
+                  <input
+                    type="checkbox"
+                    class="region-checkbox"
+                    name="region_ids"
+                    value="{{ region.id }}"
+                    data-region-id="{{ region.id }}"
+                    data-region-name="{{ region.name }}"
+                    {% if region.id|string in (form_data.region_ids or []) %}checked{% endif %}>
+                </label>
+                {% endfor %}
+              </div>
+
+              <div class="custom-multi__footer">
+                <button type="button" class="btn btn-sm btn-light border" id="regionsCloseBtn">
+                  <i class="bi bi-x-circle me-1"></i>
+                  إغلاق
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="region-tabs-wrap" id="regionTabsWrap">
+            <div class="region-tabs" id="regionTabs"></div>
+            <div class="region-tab-panel panel-lite" id="regionTabPanel"></div>
+          </div>
+        </div>
+
+        <div id="regionHiddenStore"></div>
+
+        <div class="col-12 d-grid mt-2">
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="bi bi-check2-circle"></i>
+            <span>إنشاء المهمة</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<script>
+  (function () {
+    const regionsData = [
+      {% for region in regions %}
+    {
+    id: "{{ region.id }}",
+      name: "{{ region.name|e }}",
+        prisons: [
+          {% for prison in region.prisons %}
+  { id: "{{ prison.id }}", name: "{{ prison.name|e }}" } {% if not loop.last %}, {% endif %}
+  {% endfor %}
+      ],
+  users: [
+    {% for user in candidate_users if user.region_id == region.id or user.org_unit_type == 'central' %}
+  {
+    id: "{{ user.id }}",
+      name: "{{ user.full_name|e }}",
+        meta: "{{ (user.job_title or user.role)|e }}{% if user.org_unit_type == 'central' %} — الجهاز الرئيسي{% else %} — المنطقة{% endif %}"
+  } {% if not loop.last %}, {% endif %}
+  {% endfor %}
+      ]
+    }{% if not loop.last %}, {% endif %}
+  {% endfor %}
+  ];
+
+  const formSelectedPrisons = {{ (form_data.selected_prisons or { })| tojson }};
+  const formSelectedAssignees = {{ (form_data.selected_assignees or { })| tojson }};
+
+  const missionTitle = document.getElementById('mission_title');
+  const templateSelect = document.getElementById('template_id');
+  const classificationSelect = document.getElementById('mission_classification');
+  const prisonScopeSelect = document.getElementById('globalPrisonScope');
+  const assignmentModeSelect = document.getElementById('assignment_mode');
+
+  const regionsMulti = document.getElementById('regionsMulti');
+  const regionsTrigger = document.getElementById('regionsTrigger');
+  const regionsTriggerText = document.getElementById('regionsTriggerText');
+  const regionsSearch = document.getElementById('regionsSearch');
+  const regionsOptions = document.getElementById('regionsOptions');
+  const regionsCloseBtn = document.getElementById('regionsCloseBtn');
+
+  const regionTabs = document.getElementById('regionTabs');
+  const regionTabPanel = document.getElementById('regionTabPanel');
+  const regionHiddenStore = document.getElementById('regionHiddenStore');
+
+  let activeRegionId = null;
+
+  // حالة دائمة لكل المناطق المختارة
+  const selectionState = {};
+
+  function ensureRegionState(regionId) {
+    const key = String(regionId);
+    if (!selectionState[key]) {
+      selectionState[key] = {
+        prisons: Array.isArray(formSelectedPrisons[key]) ? [...formSelectedPrisons[key]] : [],
+        assignees: Array.isArray(formSelectedAssignees[key]) ? [...formSelectedAssignees[key]] : []
+      };
+    }
+    return selectionState[key];
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function classificationLabel(value) {
+    const map = {
+      annual_plan: 'خطة سنوية',
+      quarterly_plan: 'خطة ربع سنوية',
+      follow_up: 'متابعة',
+      ad_hoc: 'مهمة غير مجدولة'
+    };
+    return map[value] || '';
+  }
+
+  function suggestTitle() {
+    if (missionTitle && missionTitle.dataset.edited === '1') return;
+
+    const selectedOption = templateSelect?.options[templateSelect.selectedIndex];
+    const templateName = selectedOption ? selectedOption.getAttribute('data-name') : '';
+    const cls = classificationLabel(classificationSelect?.value);
+
+    if (!missionTitle) return;
+
+    if (templateName && cls) {
+      missionTitle.value = `${templateName} — ${cls}`;
+    } else if (templateName) {
+      missionTitle.value = templateName;
+    } else {
+      missionTitle.value = '';
+    }
+  }
+
+  function getSelectedRegionCheckboxes() {
+    return Array.from(document.querySelectorAll('.region-checkbox:checked'));
+  }
+
+  function getSelectedRegions() {
+    return getSelectedRegionCheckboxes().map(cb => ({
+      id: String(cb.dataset.regionId),
+      name: cb.dataset.regionName
+    }));
+  }
+
+  function shouldShowPrisons() {
+    return prisonScopeSelect?.value === 'fixed';
+  }
+
+  function shouldShowAssignees() {
+    return ['central_defined', 'central_with_region_completion'].includes(assignmentModeSelect?.value);
+  }
+
+  function updateTriggerText() {
+    const selected = getSelectedRegions();
+    if (!selected.length) {
+      regionsTriggerText.textContent = 'اختر المناطق المستهدفة';
+    } else if (selected.length === 1) {
+      regionsTriggerText.textContent = selected[0].name;
+    } else {
+      regionsTriggerText.textContent = `تم اختيار ${selected.length} مناطق`;
+    }
+  }
+
+  function renderHiddenStore() {
+    const selectedRegions = getSelectedRegions();
+    regionHiddenStore.innerHTML = '';
+
+    selectedRegions.forEach(region => {
+      const regionId = String(region.id);
+      const state = ensureRegionState(regionId);
+
+      const prisonScopeValue = shouldShowPrisons() ? 'fixed' : 'defer';
+      regionHiddenStore.insertAdjacentHTML(
+        'beforeend',
+        `<input type="hidden" name="prison_scope_${regionId}" value="${prisonScopeValue}">`
+      );
+
+      if (shouldShowPrisons()) {
+        state.prisons.forEach(prisonId => {
+          regionHiddenStore.insertAdjacentHTML(
+            'beforeend',
+            `<input type="hidden" name="prisons_${regionId}" value="${escapeHtml(prisonId)}">`
+          );
+        });
+      }
+
+      if (shouldShowAssignees()) {
+        state.assignees.forEach(userId => {
+          regionHiddenStore.insertAdjacentHTML(
+            'beforeend',
+            `<input type="hidden" name="central_assignees_${regionId}" value="${escapeHtml(userId)}">`
+          );
+        });
+      }
+    });
+  }
+
+  function buildSubPicker(type, regionId, title, items, selectedValues) {
+    let optionsHtml = '';
+
+    items.forEach(item => {
+      const checked = selectedValues.includes(String(item.id)) ? 'checked' : '';
+      optionsHtml += `
+        <label class="custom-option" data-name="${escapeHtml(item.name)}">
+          <div class="custom-option__text">
+            <strong>${escapeHtml(item.name)}</strong>
+            <small>${escapeHtml(item.meta || '')}</small>
+          </div>
+          <input
+            type="checkbox"
+            class="${type}-checkbox"
+            data-type="${type}"
+            data-region-id="${escapeHtml(regionId)}"
+            value="${escapeHtml(item.id)}"
+            ${checked}>
+        </label>
+      `;
+    });
+
+    if (!optionsHtml) {
+      optionsHtml = `<div class="picker-empty">لا توجد خيارات متاحة.</div>`;
+    }
+
+    return `
+      <div class="sub-picker" data-sub-picker="${type}_${regionId}">
+        <button type="button" class="sub-picker__trigger">
+          <span class="sub-picker__label">${escapeHtml(title)}</span>
+          <span class="sub-picker__value">اختر من القائمة</span>
+          <i class="bi bi-chevron-down"></i>
+        </button>
+
+        <div class="sub-picker__menu">
+          <div class="custom-multi__search">
+            <i class="bi bi-search"></i>
+            <input type="text" class="sub-picker-search" placeholder="بحث...">
+          </div>
+
+          <div class="custom-multi__options custom-multi__options--sub">
+            ${optionsHtml}
+          </div>
+
+          <div class="custom-multi__footer">
+            <button type="button" class="btn btn-sm btn-light border sub-picker-close">إغلاق</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderRegionTabs() {
+    const selectedRegions = getSelectedRegions();
+    regionTabs.innerHTML = '';
+
+    if (!selectedRegions.length) {
+      activeRegionId = null;
+      return;
+    }
+
+    const regionIds = selectedRegions.map(r => String(r.id));
+    if (!activeRegionId || !regionIds.includes(String(activeRegionId))) {
+      activeRegionId = regionIds[0];
+    }
+
+    selectedRegions.forEach(region => {
+      const regionData = regionsData.find(r => String(r.id) === String(region.id));
+      if (!regionData) return;
+
+      const tab = document.createElement('div');
+      tab.className = 'region-tab' + (String(activeRegionId) === String(region.id) ? ' is-active' : '');
+
+      tab.innerHTML = `
+        <button type="button" class="region-tab__main" data-region-tab="${region.id}">
+          <i class="bi bi-geo-alt"></i>
+          <span>${escapeHtml(regionData.name)}</span>
+          <span class="region-tab__count">${regionData.prisons.length}</span>
+        </button>
+        <button type="button" class="region-tab__remove" data-region-remove-tab="${region.id}" title="إزالة المنطقة">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      `;
+
+      regionTabs.appendChild(tab);
+    });
+
+    regionTabs.querySelectorAll('[data-region-tab]').forEach(btn => {
+      btn.addEventListener('click', function () {
+        activeRegionId = this.getAttribute('data-region-tab');
+        renderRegionTabs();
+        renderActiveRegionPanel();
+      });
+    });
+
+    regionTabs.querySelectorAll('[data-region-remove-tab]').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const regionId = this.getAttribute('data-region-remove-tab');
+        const checkbox = document.querySelector('.region-checkbox[value="' + regionId + '"]');
+
+        if (checkbox) checkbox.checked = false;
+
+        const remaining = getSelectedRegions().map(r => String(r.id)).filter(id => id !== String(regionId));
+        activeRegionId = remaining[0] || null;
+
+        refreshAll();
+      });
+    });
+  }
+
+  function renderActiveRegionPanel() {
+    const selectedRegions = getSelectedRegions();
+
+    if (!selectedRegions.length) {
+      regionTabPanel.innerHTML = `
+        <div class="empty-selection-state">
+          <div class="empty-selection-state__icon"><i class="bi bi-geo-alt"></i></div>
+          <div class="fw-bold mb-1">لم يتم اختيار مناطق بعد</div>
+          <div class="text-muted small">اختر منطقة واحدة أو أكثر لتظهر تبويبات التحديد الخاصة بها.</div>
+        </div>
+      `;
+      return;
+    }
+
+    const regionData = regionsData.find(r => String(r.id) === String(activeRegionId));
+    if (!regionData) {
+      regionTabPanel.innerHTML = '';
+      return;
+    }
+
+    const regionId = String(regionData.id);
+    const state = ensureRegionState(regionId);
+
+    const showPrisons = shouldShowPrisons();
+    const showAssignees = shouldShowAssignees();
+
+    const prisonsSection = showPrisons
+      ? buildSubPicker('prison', regionId, 'السجون', regionData.prisons, state.prisons)
+      : '';
+
+    const assigneesSection = showAssignees
+      ? buildSubPicker('assignee', regionId, 'المنفذون', regionData.users, state.assignees)
+      : '';
+
+    regionTabPanel.innerHTML = `
+      <div class="region-panel-head">
+        <div class="region-panel-head__title">
+          <div class="region-panel-head__icon"><i class="bi bi-building"></i></div>
+          <div>
+            <div class="fw-bold">${escapeHtml(regionData.name)}</div>
+            <div class="region-panel-head__meta">${regionData.prisons.length} سجن</div>
+          </div>
+        </div>
+      </div>
+
+      ${(!showPrisons && !showAssignees) ? `
+        <div class="empty-selection-state">
+          <div class="empty-selection-state__icon"><i class="bi bi-sliders"></i></div>
+          <div class="fw-bold mb-1">لا توجد إعدادات إضافية مطلوبة حاليًا</div>
+          <div class="text-muted small">سيتم تحديد السجون أو المنفذين لاحقًا حسب آلية الإسناد المختارة.</div>
+        </div>
+      ` : `
+        <div class="region-panel-grid">
+          ${showPrisons ? `<div>${prisonsSection}</div>` : ''}
+          ${showAssignees ? `<div>${assigneesSection}</div>` : ''}
+        </div>
+      `}
+    `;
+
+    initSubPickers();
+    refreshSubPickerLabels();
+  }
+
+  function refreshSubPickerLabels() {
+    document.querySelectorAll('[data-sub-picker]').forEach(picker => {
+      const checked = picker.querySelectorAll('input[type="checkbox"]:checked');
+      const valueEl = picker.querySelector('.sub-picker__value');
+      if (!valueEl) return;
+
+      if (!checked.length) {
+        valueEl.textContent = 'اختر من القائمة';
+      } else if (checked.length === 1) {
+        const label = checked[0].closest('.custom-option')?.querySelector('.custom-option__text strong')?.textContent?.trim();
+        valueEl.textContent = label || 'تم اختيار عنصر واحد';
+      } else {
+        valueEl.textContent = `تم اختيار ${checked.length} عناصر`;
+      }
+    });
+  }
+
+  function updateStateFromCheckbox(regionId, type, checkboxEl) {
+    const state = ensureRegionState(regionId);
+    const key = type === 'prison' ? 'prisons' : 'assignees';
+    const value = String(checkboxEl.value);
+
+    if (checkboxEl.checked) {
+      if (!state[key].includes(value)) state[key].push(value);
+    } else {
+      state[key] = state[key].filter(v => v !== value);
+    }
+
+    renderHiddenStore();
+    refreshSubPickerLabels();
+  }
+
+  function initSubPickers() {
+    document.querySelectorAll('[data-sub-picker]').forEach(picker => {
+      if (picker.dataset.bound === '1') return;
+      picker.dataset.bound = '1';
+
+      const trigger = picker.querySelector('.sub-picker__trigger');
+      const closeBtn = picker.querySelector('.sub-picker-close');
+      const searchInput = picker.querySelector('.sub-picker-search');
+
+      trigger?.addEventListener('click', function (e) {
+        e.stopPropagation();
+
+        document.querySelectorAll('[data-sub-picker].is-open').forEach(other => {
+          if (other !== picker) other.classList.remove('is-open');
+        });
+
+        picker.classList.toggle('is-open');
+      });
+
+      closeBtn?.addEventListener('click', function () {
+        picker.classList.remove('is-open');
+        refreshSubPickerLabels();
+      });
+
+      picker.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', function () {
+          const regionId = this.dataset.regionId;
+          const type = this.dataset.type;
+          updateStateFromCheckbox(regionId, type, this);
+        });
+      });
+
+      searchInput?.addEventListener('input', function () {
+        const keyword = this.value.trim().toLowerCase();
+        picker.querySelectorAll('.custom-option').forEach(option => {
+          const name = (option.dataset.name || '').toLowerCase();
+          option.style.display = name.includes(keyword) ? '' : 'none';
+        });
+      });
+    });
+  }
+
+  function refreshAll() {
+    const selectedRegions = getSelectedRegions();
+
+    Object.keys(selectionState).forEach(regionId => {
+      if (!selectedRegions.find(r => String(r.id) === String(regionId))) {
+        delete selectionState[regionId];
+      }
+    });
+
+    selectedRegions.forEach(region => ensureRegionState(region.id));
+
+    updateTriggerText();
+    renderRegionTabs();
+    renderActiveRegionPanel();
+    renderHiddenStore();
+  }
+
+  regionsTrigger?.addEventListener('click', function (e) {
+    e.stopPropagation();
+    regionsMulti.classList.toggle('is-open');
+  });
+
+  regionsCloseBtn?.addEventListener('click', function () {
+    regionsMulti.classList.remove('is-open');
+  });
+
+  regionsSearch?.addEventListener('input', function () {
+    const keyword = this.value.trim().toLowerCase();
+    regionsOptions.querySelectorAll('.custom-option').forEach(option => {
+      const name = (option.dataset.name || '').toLowerCase();
+      option.style.display = name.includes(keyword) ? '' : 'none';
+    });
+  });
+
+  document.querySelectorAll('.region-checkbox').forEach(cb => {
+    cb.addEventListener('change', function () {
+      const checkedRegions = getSelectedRegions().map(r => String(r.id));
+      if (!checkedRegions.includes(String(activeRegionId))) {
+        activeRegionId = checkedRegions[0] || null;
+      }
+      refreshAll();
+    });
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#regionsMulti')) {
+      regionsMulti?.classList.remove('is-open');
+    }
+
+    if (!e.target.closest('[data-sub-picker]')) {
+      document.querySelectorAll('[data-sub-picker].is-open').forEach(picker => {
+        picker.classList.remove('is-open');
+      });
+    }
+  });
+
+  prisonScopeSelect?.addEventListener('change', refreshAll);
+  assignmentModeSelect?.addEventListener('change', refreshAll);
+
+  templateSelect?.addEventListener('change', suggestTitle);
+  classificationSelect?.addEventListener('change', suggestTitle);
+
+  missionTitle?.addEventListener('input', function () {
+    this.dataset.edited = this.value.trim() ? '1' : '0';
+  });
+
+  suggestTitle();
+  refreshAll();
+}) ();
+</script>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}الرئيسية{% endblock %}
+{% block content %}
+<div class="hero-panel mb-4">
+  <div>
+    <div class="eyebrow">لوحة متابعة مخصصة</div>
+    <h2 class="mb-2">مرحبًا {{ current_user.full_name }}</h2>
+    <p class="mb-0 text-muted">واجهة مخصصة حسب الدور، مع مؤشرات تشغيلية ومخاطر وتقدم المعالجة.</p>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  {% for key, value in stats.items() %}
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card stat-card h-100 border-0 shadow-sm">
+      <div class="card-body">
+        <div class="small text-muted mb-2">{{ key|replace('_',' ') }}</div>
+        <div class="display-6 fw-bold">{{ value }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if current_user.role in ['central_admin','central_operator','central_director'] %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-bold">آخر المهام</div>
+      <div class="card-body p-0">
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>المرجع</th><th>المهمة</th><th>الحالة</th><th></th></tr></thead><tbody>
+        {% for mission in missions %}
+        <tr><td>{{ mission.reference_no }}</td><td>{{ mission.title }}</td><td>{{ mission.status }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.detail', mission_id=mission.id) }}">استعراض</a></td></tr>
+        {% endfor %}
+        </tbody></table></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-white fw-bold">أحدث الملاحظات</div>
+      <div class="list-group list-group-flush">
+        {% for obs in observations %}
+        <a class="list-group-item list-group-item-action" href="{{ url_for('missions.observation_detail', observation_id=obs.id) }}">
+          <div class="fw-bold">{{ obs.title }}</div>
+          <div class="small text-muted">{{ obs.department.name }} — {{ obs.severity }} — {{ obs.status }}</div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% elif current_user.role in ['region_manager','prison_director'] %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white fw-bold">تقارير المنطقة</div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>المهمة</th><th>السجون</th><th>النسبة</th><th>المخاطر</th><th>الحالة</th><th></th></tr></thead><tbody>
+  {% for mr in mission_regions %}
+  <tr>
+    <td>{{ mr.mission.title }}</td>
+    <td>{{ mr.prisons|map(attribute='name')|join('، ') or '—' }}</td>
+    <td>{{ mr.score_percentage }}%</td>
+    <td>{{ mr.risk_label }}</td>
+    <td>{{ mr.status }}</td>
+    <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.region_execution', region_report_id=mr.id) if current_user.role=='region_manager' else url_for('missions.prison_director_review', region_report_id=mr.id) }}">استعراض</a></td>
+  </tr>
+  {% endfor %}
+  </tbody></table></div>
+</div>
+{% elif current_user.role == 'department_manager' %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white fw-bold">ملاحظات الإدارة المختصة</div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>المنطقة</th><th>العنوان</th><th>الخطورة</th><th>الاستحقاق</th><th>الحالة</th><th></th></tr></thead><tbody>
+  {% for obs in observations %}
+  <tr><td>{{ obs.mission_region.region.name }}</td><td>{{ obs.title }}</td><td>{{ obs.severity }}</td><td>{{ obs.due_date }}</td><td>{{ obs.status }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.observation_detail', observation_id=obs.id) }}">فتح</a></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</div>
+{% elif current_user.role == 'director_general' %}
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white fw-bold">التقارير النهائية الواردة</div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>المرجع</th><th>المهمة</th><th>تاريخ الإرسال</th><th></th></tr></thead><tbody>
+  {% for mission in missions %}
+  <tr><td>{{ mission.reference_no }}</td><td>{{ mission.title }}</td><td>{{ mission.sent_to_dg_at.strftime('%Y-%m-%d') if mission.sent_to_dg_at else '—' }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.dg_review', mission_id=mission.id) }}">عرض التقرير</a></td></tr>
+  {% endfor %}
+  </tbody></table></div>
+</div>
+{% endif %}
+{% endblock %}

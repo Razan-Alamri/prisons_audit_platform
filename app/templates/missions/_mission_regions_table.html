@@ -1,0 +1,30 @@
+<div class="table-responsive">
+<table class="table table-hover align-middle">
+  <thead>
+    <tr><th>المهمة</th><th>المنطقة</th><th>الحالة</th><th>السجون</th><th>الدرجة</th><th>المخاطر</th><th></th></tr>
+  </thead>
+  <tbody>
+    {% for mr in mission_regions %}
+    <tr>
+      <td>{{ mr.mission.reference_no if mr.mission else '' }}<br><small>{{ mr.mission.title if mr.mission else '' }}</small></td>
+      <td>{{ mr.region.name }}</td>
+      <td><span class="status-chip">{{ mr.status }}</span></td>
+      <td>{{ mr.prisons | map(attribute='name') | join('، ') }}</td>
+      <td>{{ mr.score_percentage }}%</td>
+      <td>{{ mr.risk_level }}</td>
+      <td>
+        <a class="btn btn-sm btn-outline-success" href="{{ url_for('missions.detail', mission_id=mr.mission_id) }}">التفاصيل</a>
+        {% if current_user.role in ['region_manager','central_admin','central_operator','central_director'] and mr.status == 'pending_region_setup' %}
+          <a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.region_setup', mission_region_id=mr.id) }}">تجهيز</a>
+        {% endif %}
+        {% if current_user.role in ['executor','region_manager','central_admin','central_operator','central_director'] %}
+          <a class="btn btn-sm btn-primary" href="{{ url_for('missions.region_execute', mission_region_id=mr.id) }}">التنفيذ</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-center text-muted py-4">لا توجد سجلات.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

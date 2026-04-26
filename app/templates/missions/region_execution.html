@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}تنفيذ الجولة{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+  <div>
+    <div class="eyebrow">{{ mr.mission.reference_no }} — {{ mr.region.name }}</div>
+    <h2 class="mb-1">{{ mr.mission.title }}</h2>
+    <div class="text-muted">السجون: {{ mr.prisons|map(attribute='name')|join('، ') or '—' }} | المنفذون: {{ mr.executors|map(attribute='full_name')|join('، ') or '—' }}</div>
+  </div>
+  <div class="metric-strip large">
+    <div><div class="small text-muted">النتيجة</div><div class="fw-bold">{{ mr.score_percentage }}%</div></div>
+    <div><div class="small text-muted">المخاطر</div><div class="fw-bold">{{ mr.risk_label }}</div></div>
+    <div><div class="small text-muted">الملاحظات</div><div class="fw-bold">{{ mr.observations|length }}</div></div>
+  </div>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="vstack gap-4 mb-5">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white fw-bold">البيانات العامة للجولة</div>
+    <div class="card-body row g-3">
+      <div class="col-md-2"><label class="form-label">اليوم</label><input class="form-control" name="visit_day_name" value="{{ mr.visit_day_name or '' }}"></div>
+      <div class="col-md-2"><label class="form-label">التاريخ</label><input type="date" class="form-control" name="visit_date" value="{{ mr.visit_date.isoformat() if mr.visit_date else '' }}"></div>
+      <div class="col-md-2"><label class="form-label">بداية الزيارة</label><input type="time" class="form-control" name="start_time" value="{{ mr.start_time or '' }}"></div>
+      <div class="col-md-2"><label class="form-label">نهاية الزيارة</label><input type="time" class="form-control" name="end_time" value="{{ mr.end_time or '' }}"></div>
+      <div class="col-md-2"><label class="form-label">نوع الزيارة</label><select class="form-select" name="visit_mode"><option {% if mr.visit_mode=='ميدانية' %}selected{% endif %}>ميدانية</option><option {% if mr.visit_mode=='مكتبية' %}selected{% endif %}>مكتبية</option><option {% if mr.visit_mode=='مختلطة' %}selected{% endif %}>مختلطة</option></select></div>
+      <div class="col-md-4"><label class="form-label">الجهة أو الإدارة التي تمت زيارتها</label><input class="form-control" name="visited_department_name" value="{{ mr.visited_department_name or '' }}"></div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white fw-bold">التقييم</div>
+    <div class="card-body">
+      {% for section in mr.mission.template.sections %}
+      <div class="section-block mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="mb-0">{{ section.title }}</h5>
+          <span class="badge text-bg-light">الوزن {{ section.weight_percentage }}%</span>
+        </div>
+        <div class="table-responsive"><table class="table table-striped align-middle">
+          <thead><tr><th style="width:60px">#</th><th>المعيار</th><th style="width:220px">التقييم</th></tr></thead>
+          <tbody>
+          {% for criterion in section.criteria %}
+            {% set existing = mr.response_for(criterion.id) %}
+            <tr>
+              <td>{{ loop.index }}</td>
+              <td>{{ criterion.text }}</td>
+              <td>
+                <select class="form-select" name="criterion_{{ criterion.id }}">
+                  <option value="">اختر</option>
+                  {% for label in rating_options %}
+                  <option value="{{ label }}" {% if existing and existing.rating_label == label %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-white fw-bold">ملخص التقرير والتوصيات والمرفقات</div>
+    <div class="card-body row g-3">
+      <div class="col-md-6"><label class="form-label">ملخص الجولة / النشاط</label><textarea class="form-control" name="report_summary" rows="4">{{ mr.report_summary or '' }}</textarea></div>
+      <div class="col-md-6"><label class="form-label">التوصيات</label><textarea class="form-control" name="recommendations" rows="4">{{ mr.recommendations or '' }}</textarea></div>
+      <div class="col-12"><label class="form-label">مرفقات التقرير</label><input type="file" class="form-control" name="report_attachments" multiple></div>
+      {% if mr.attachments %}<div class="col-12 small text-muted">المرفقات الحالية: {{ mr.attachments|map(attribute='original_name')|join('، ') }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" name="submit_action" value="save">حفظ مسودة</button>
+    <button class="btn btn-primary" name="submit_action" value="save_and_send">حفظ وإرسال للإدارة المركزية</button>
+  </div>
+</form>
+
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-header bg-white fw-bold">الملاحظات والمرفقات والتوصيات</div>
+  <div class="card-body">
+    <form method="post" action="{{ url_for('missions.add_observation', region_report_id=mr.id) }}" enctype="multipart/form-data" class="row g-3 mb-4">
+      <div class="col-md-2"><label class="form-label">نوع الملاحظة</label><select class="form-select" name="source_type"><option value="criterion">على معيار</option><option value="other">ملاحظة أخرى</option></select></div>
+      <div class="col-md-4"><label class="form-label">المعيار المرتبط</label><select class="form-select" name="criterion_id"><option value="">غير مرتبط</option>{% for c in criteria_list %}<option value="{{ c.id }}">{{ c.section.title }} - {{ c.text[:80] }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">العنوان</label><input class="form-control" name="title" required></div>
+      <div class="col-md-6"><label class="form-label">الوصف</label><textarea class="form-control" name="details" rows="3" required></textarea></div>
+      <div class="col-md-2"><label class="form-label">التصنيف</label><select class="form-select" name="category"><option>سلامة</option><option>تشغيل</option><option>مالية</option><option>حوكمة</option><option>تقنية</option><option>موارد بشرية</option></select></div>
+      <div class="col-md-2"><label class="form-label">الإدارة المختصة</label><select class="form-select" name="department_id">{% for d in departments %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-2"><label class="form-label">الخطورة</label><select class="form-select" name="severity"><option>منخفضة</option><option>متوسطة</option><option>عالية</option><option>حرجة</option></select></div>
+      <div class="col-md-2"><label class="form-label">الأولوية</label><select class="form-select" name="priority"><option>عادية</option><option>مهمة</option><option>عاجلة</option><option>عاجلة جدًا</option></select></div>
+      <div class="col-md-2"><label class="form-label">SLA</label><select class="form-select" name="sla_label">{% for label in ['24 ساعة','3 أيام عمل','5 أيام عمل','7 أيام عمل','14 يوم عمل','30 يومًا'] %}<option>{{ label }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">توصية المعالجة</label><textarea class="form-control" name="recommendation" rows="2"></textarea></div>
+      <div class="col-md-6"><label class="form-label">مرفقات الملاحظة</label><input type="file" class="form-control" name="observation_attachments" multiple></div>
+      <div class="col-12"><button class="btn btn-primary">إضافة الملاحظة</button></div>
+    </form>
+
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>العنوان</th><th>النوع</th><th>التصنيف</th><th>الإدارة</th><th>الخطورة</th><th>SLA</th><th>الحالة</th><th></th></tr></thead>
+      <tbody>
+        {% for obs in mr.observations %}
+        <tr>
+          <td>{{ obs.title }}</td>
+          <td>{{ 'على معيار' if obs.source_type == 'criterion' else 'أخرى' }}</td>
+          <td>{{ obs.category }}</td>
+          <td>{{ obs.department.name }}</td>
+          <td>{{ obs.severity }}</td>
+          <td>{{ obs.sla_label }}</td>
+          <td>{{ obs.status }}</td>
+          <td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.observation_detail', observation_id=obs.id) }}">تفاصيل</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-4">لا توجد ملاحظات بعد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
+{% endblock %}

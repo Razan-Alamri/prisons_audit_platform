@@ -1,0 +1,29 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4">
+  <div class="eyebrow">التقارير والاستخراج</div>
+  <h2 class="mb-2">التقارير المجمعة وتصدير الملفات</h2>
+  <p class="mb-0 text-muted">استعراض المهام الجاهزة وتصدير مخرجات Excel و PDF لكل مهمة.</p>
+</div>
+<div class="table-card p-0 overflow-hidden">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead><tr><th>المرجع</th><th>العنوان</th><th>الحالة</th><th>التقارير المناطق</th><th>استخراج</th></tr></thead>
+      <tbody>
+        {% for m in missions %}
+        <tr>
+          <td>{{ m.reference_no }}</td>
+          <td>{{ m.title }}</td>
+          <td>{{ m.overall_status_label() }}</td>
+          <td>{{ m.regions|length }}</td>
+          <td class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-success" href="{{ url_for('reports.mission_excel', mission_id=m.id) }}">Excel</a>
+            <a class="btn btn-sm btn-outline-danger" href="{{ url_for('reports.mission_pdf', mission_id=m.id) }}">PDF</a>
+          </td>
+        </tr>
+        {% else %}<tr><td colspan="5" class="text-center text-muted">لا توجد تقارير حتى الآن</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

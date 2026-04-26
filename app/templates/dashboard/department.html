@@ -1,0 +1,17 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4"><div class="eyebrow">لوحة الإدارة المختصة</div><h2 class="mb-2">استقبال الملاحظات والرد بالتلافي</h2><p class="mb-0 text-muted">هذه اللوحة مخصصة للملاحظات المحالة لإدارتك مع متابعة المهلة والحالة والتقدم في المعالجة.</p></div>
+<div class="stats-grid mb-4">
+  <div class="stat-card"><span>الملاحظات الواردة</span><strong>{{ stats.received }}</strong></div>
+  <div class="stat-card"><span>المفتوحة</span><strong>{{ stats.open }}</strong></div>
+  <div class="stat-card"><span>قيد المعالجة</span><strong>{{ stats.under_treatment }}</strong></div>
+  <div class="stat-card"><span>تم التلافي</span><strong>{{ stats.resolved }}</strong></div>
+  <div class="stat-card"><span>متأخرة</span><strong>{{ stats.overdue }}</strong></div>
+</div>
+<div class="chart-grid mb-4">
+  <div class="chart-card"><h6>حالات الملاحظات</h6><canvas data-chart='{{ {"type":"bar","labels":charts["obs_status"]["labels"],"values":charts["obs_status"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>مستويات الخطورة</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["severity_dist"]["labels"],"values":charts["severity_dist"]["values"]}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>اتجاه المعالجة</h6><canvas data-chart='{{ {"type":"line","labels":charts["trend_monthly"]["labels"],"values":charts["trend_monthly"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+</div>
+<div class="table-card p-0 overflow-hidden"><div class="p-3 border-bottom"><h5 class="mb-0">الملاحظات التابعة للإدارة</h5></div><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>العنوان</th><th>الخطورة</th><th>الحالة</th><th>الاستحقاق</th><th></th></tr></thead><tbody>{% for o in observations %}<tr><td>{{ o.title }}</td><td>{{ o.severity }}</td><td>{{ o.status }}</td><td>{{ o.due_date or '—' }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.observation_detail', observation_id=o.id) }}">استعراض</a></td></tr>{% else %}<tr><td colspan="5" class="text-center text-muted">لا توجد ملاحظات حالياً</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

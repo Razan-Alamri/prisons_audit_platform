@@ -1,0 +1,162 @@
+{% extends 'layouts/base.html' %}
+{% block title %}تفاصيل المهمة{% endblock %}
+
+{% block content %}
+<div class="hero-panel mb-4">
+  <div class="eyebrow">تفاصيل المهمة</div>
+  <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
+    <div>
+      <h2 class="mb-2">{{ mission.title }}</h2>
+      <div class="text-muted">
+        {{ mission.reference_no }} — {{ mission.template.name }} — {{ mission.overall_status_label() }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="table-card p-0 overflow-hidden mb-4">
+      <div class="p-3 border-bottom">
+        <h5 class="mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-diagram-3 text-success"></i>
+          <span>المناطق وتقارير السجون</span>
+        </h5>
+      </div>
+
+      {% for mr in mission.regions %}
+      <div class="mission-region-block border-bottom">
+        <div class="p-3 bg-light-subtle border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <strong>{{ mr.region.name }}</strong>
+            <div class="small text-muted">
+              حالة المنطقة: {{ mr.status }}
+            </div>
+          </div>
+          <div>
+            <span class="badge-soft {% if mr.risk_level == 'منخفضة' %}badge-risk-low{% elif mr.risk_level == 'متوسطة' %}badge-risk-med{% elif mr.risk_level == 'مرتفعة' %}badge-risk-high{% else %}badge-risk-critical{% endif %}">
+              {{ mr.risk_level }}
+            </span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>السجن</th>
+                <th>المنفذون</th>
+                <th>الدرجة</th>
+                <th>الخطورة</th>
+                <th>الملاحظات</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pr in mr.prison_reports %}
+              <tr>
+                <td>{{ pr.prison.name }}</td>
+                <td>{{ pr.assignees|map(attribute='full_name')|join('، ') or '—' }}</td>
+                <td>{{ pr.score_percentage }}%</td>
+                <td>
+                  <span class="badge-soft {% if pr.risk_level == 'منخفضة' %}badge-risk-low{% elif pr.risk_level == 'متوسطة' %}badge-risk-med{% elif pr.risk_level == 'مرتفعة' %}badge-risk-high{% else %}badge-risk-critical{% endif %}">
+                    {{ pr.risk_level }}
+                  </span>
+                </td>
+                <td>{{ pr.observations|length }}</td>
+                <td>{{ pr.status }}</td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">لا توجد تقارير سجون لهذه المنطقة حتى الآن.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="p-4 text-center text-muted">لا توجد مناطق مرتبطة بهذه المهمة.</div>
+      {% endfor %}
+    </div>
+
+    <div class="table-card p-0 overflow-hidden">
+      <div class="p-3 border-bottom">
+        <h5 class="mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-clock-history text-success"></i>
+          <span>سجل التتبع والنشاط</span>
+        </h5>
+      </div>
+      <div class="p-3 timeline timeline-modern">
+        {% for log in entity_logs %}
+        <div class="timeline-item-modern">
+          <div class="timeline-item-modern__dot">
+            <i class="bi bi-activity"></i>
+          </div>
+          <div class="timeline-item-modern__content">
+            <h6 class="mb-2">{{ log.action }}</h6>
+            <div class="timeline-note mb-2">{{ log.notes or '—' }}</div>
+            <div class="timeline-meta">
+              <span class="timeline-user">
+                <i class="bi bi-person-circle"></i>
+                {{ log.user.full_name if log.user else '—' }}
+              </span>
+              <span class="timeline-date">
+                <i class="bi bi-calendar-event"></i>
+                {{ log.created_at.strftime('%Y-%m-%d %H:%M') }}
+              </span>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <div class="empty-history-state">
+          <div class="empty-history-state__icon"><i class="bi bi-clock-history"></i></div>
+          <div class="fw-bold mb-1">لا يوجد سجل تتبع حتى الآن</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="form-card mb-4">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle text-success"></i>
+        <span>بيانات المهمة</span>
+      </h5>
+
+      <dl class="row mb-0">
+        <dt class="col-5">النموذج</dt>
+        <dd class="col-7">{{ mission.template.name }}</dd>
+
+        <dt class="col-5">التصنيف</dt>
+        <dd class="col-7">{{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification) }}</dd>
+
+        <dt class="col-5">الأولوية</dt>
+        <dd class="col-7">{{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}</dd>
+
+        <dt class="col-5">آلية الإسناد</dt>
+        <dd class="col-7">{{ ASSIGNMENT_MODE_LABELS.get(mission.assignment_mode, mission.assignment_mode) }}</dd>
+
+        <dt class="col-5">التنفيذ المستهدف</dt>
+        <dd class="col-7">{{ mission.planned_date.strftime('%Y-%m-%d') if mission.planned_date else '—' }}</dd>
+
+        <dt class="col-5">الاستحقاق</dt>
+        <dd class="col-7">{{ mission.due_date.strftime('%Y-%m-%d') if mission.due_date else '—' }}</dd>
+
+        <dt class="col-5">تعليمات التكليف</dt>
+        <dd class="col-7">{{ mission.task_instructions or '—' }}</dd>
+
+        <dt class="col-5">الملخص النهائي</dt>
+        <dd class="col-7">{{ mission.final_summary or '—' }}</dd>
+
+        <dt class="col-5">التوصيات</dt>
+        <dd class="col-7">{{ mission.final_recommendations or '—' }}</dd>
+
+        <dt class="col-5">رأي المراجعة</dt>
+        <dd class="col-7">{{ mission.internal_audit_opinion or '—' }}</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+{% endblock %}

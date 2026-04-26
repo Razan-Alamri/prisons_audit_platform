@@ -1,0 +1,17 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4"><div class="eyebrow">لوحة المنفذ</div><h2 class="mb-2">المهام المسندة إليك فقط</h2><p class="mb-0 text-muted">تنفيذ التقرير مقتصر على المسند لهم المهمة فعليًا مع تتبع كامل للتعديلات والملاحظات.</p></div>
+<div class="stats-grid mb-4">
+  <div class="stat-card"><span>التقارير المسندة</span><strong>{{ stats.assigned_reports }}</strong></div>
+  <div class="stat-card"><span>المكتملة</span><strong>{{ stats.completed_reports }}</strong></div>
+  <div class="stat-card"><span>الملاحظات المرصودة</span><strong>{{ stats.observations_recorded }}</strong></div>
+  <div class="stat-card"><span>الملاحظات الحرجة</span><strong>{{ stats.critical_observations }}</strong></div>
+  <div class="stat-card"><span>متوسط التقييم</span><strong>{{ stats.avg_score }}%</strong></div>
+</div>
+<div class="chart-grid mb-4">
+  <div class="chart-card"><h6>حالات الملاحظات في مهامي</h6><canvas data-chart='{{ {"type":"bar","labels":charts["obs_status"]["labels"],"values":charts["obs_status"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>مستويات الخطورة في مهامي</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["severity_dist"]["labels"],"values":charts["severity_dist"]["values"]}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>الاتجاه الشهري</h6><canvas data-chart='{{ {"type":"line","labels":charts["trend_monthly"]["labels"],"values":charts["trend_monthly"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+</div>
+<div class="panel p-3"><h5 class="mb-3">مهامي</h5>{% include 'missions/_mission_regions_table.html' %}</div>
+{% endblock %}

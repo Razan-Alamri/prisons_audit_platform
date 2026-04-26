@@ -1,0 +1,18 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4"><div class="eyebrow">لوحة مدير سجون المنطقة</div><h2 class="mb-2">متابعة التلافي والتوجيه على مستوى المنطقة</h2><p class="mb-0 text-muted">تعرض الملاحظات الواردة، حالات المعالجة، والسجون الأعلى مخاطرة في نطاقك فقط.</p></div>
+<div class="stats-grid mb-4">
+  <div class="stat-card"><span>الملاحظات المفتوحة</span><strong>{{ stats.open_observations }}</strong></div>
+  <div class="stat-card"><span>بانتظار اعتماد مدير المنطقة</span><strong>{{ stats.awaiting_director }}</strong></div>
+  <div class="stat-card"><span>تم التلافي</span><strong>{{ stats.resolved }}</strong></div>
+  <div class="stat-card"><span>عدد السجون</span><strong>{{ stats.prisons_count }}</strong></div>
+  <div class="stat-card"><span>سجون عالية الخطورة</span><strong>{{ stats.high_risk_prisons }}</strong></div>
+</div>
+<div class="chart-grid mb-4">
+  <div class="chart-card"><h6>الملاحظات حسب الحالة</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["obs_status"]["labels"],"values":charts["obs_status"]["values"]}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>الملاحظات المفتوحة حسب السجن</h6><canvas data-chart='{{ {"type":"bar","labels":charts["risk_by_prison"]["labels"],"values":charts["risk_by_prison"]["values"],"label":"ملاحظات مفتوحة"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>اتجاه الملاحظات</h6><canvas data-chart='{{ {"type":"line","labels":charts["trend_monthly"]["labels"],"values":charts["trend_monthly"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>توزيع مستويات الخطورة</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["severity_dist"]["labels"],"values":charts["severity_dist"]["values"]}|tojson|safe }}'></canvas></div>
+</div>
+<div class="panel p-3"><h5 class="mb-3">تقارير المنطقة</h5>{% include 'missions/_mission_regions_table.html' %}</div>
+{% endblock %}

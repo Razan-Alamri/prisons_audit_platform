@@ -1,0 +1,8 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="page-head"><h2>تقرير المدير العام - {{ mission.reference_no }}</h2></div>
+<div class="row g-4">
+  <div class="col-lg-8"><div class="panel"><h5>التقرير النهائي</h5><dl class="meta-list"><dt>العنوان</dt><dd>{{ mission.title }}</dd><dt>الملخص النهائي</dt><dd>{{ mission.final_summary or '-' }}</dd><dt>التوصيات</dt><dd>{{ mission.final_recommendations or '-' }}</dd><dt>رأي المراجعة الداخلية</dt><dd>{{ mission.internal_audit_opinion or '-' }}</dd></dl><div class="table-responsive"><table class="table"><thead><tr><th>المنطقة</th><th>الدرجة</th><th>المخاطر</th><th>الملاحظات</th></tr></thead><tbody>{% for mr in mission.regions %}<tr><td>{{ mr.region.name }}</td><td>{{ mr.score_percentage }}%</td><td>{{ mr.risk_level }}</td><td>{{ mr.observations|length }}</td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-4"><div class="panel sticky-top-panel"><form method="post"><label class="form-label">قرار المدير العام</label><textarea class="form-control" rows="8" name="dg_decision">{{ mission.dg_decision or '' }}</textarea><button class="btn btn-success w-100 mt-3" name="action" value="close">اعتماد وإغلاق التقرير</button></form></div></div>
+</div>
+{% endblock %}

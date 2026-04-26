@@ -1,0 +1,18 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4"><div class="eyebrow">اللوحة القيادية</div><h2 class="mb-2">التقارير النهائية المرفوعة للمدير العام</h2><p class="mb-0 text-muted">لا تظهر الجولات التشغيلية هنا، وإنما المؤشرات العليا والتقارير النهائية الجاهزة للاعتماد أو التوجيه.</p></div>
+<div class="stats-grid mb-4">
+  <div class="stat-card"><span>التقارير النهائية</span><strong>{{ stats.final_reports_total }}</strong></div>
+  <div class="stat-card"><span>المغلقة</span><strong>{{ stats.closed_reports }}</strong></div>
+  <div class="stat-card"><span>جاهزة للمراجعة</span><strong>{{ stats.ready_for_review }}</strong></div>
+  <div class="stat-card"><span>ملاحظات مفتوحة</span><strong>{{ stats.open_observations }}</strong></div>
+  <div class="stat-card"><span>متوسط مؤشر المخاطر</span><strong>{{ stats.avg_risk_index }}</strong></div>
+</div>
+<div class="chart-grid mb-4">
+  <div class="chart-card"><h6>مؤشر الخطورة حسب المنطقة</h6><canvas data-chart='{{ {"type":"bar","labels":charts["risk_by_region"]["labels"],"values":charts["risk_by_region"]["values"],"label":"مؤشر الخطورة"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>حالات الملاحظات</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["obs_status"]["labels"],"values":charts["obs_status"]["values"]}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>اتجاه الملاحظات</h6><canvas data-chart='{{ {"type":"line","labels":charts["trend_monthly"]["labels"],"values":charts["trend_monthly"]["values"],"label":"عدد الملاحظات"}|tojson|safe }}'></canvas></div>
+  <div class="chart-card"><h6>توزيع مستويات الخطورة</h6><canvas data-chart='{{ {"type":"doughnut","labels":charts["severity_dist"]["labels"],"values":charts["severity_dist"]["values"]}|tojson|safe }}'></canvas></div>
+</div>
+<div class="table-card p-0 overflow-hidden"><div class="p-3 border-bottom"><h5 class="mb-0">التقارير النهائية الواردة</h5></div><div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>المرجع</th><th>المهمة</th><th>تاريخ الإرسال</th><th></th></tr></thead><tbody>{% for mission in reports %}<tr><td>{{ mission.reference_no }}</td><td>{{ mission.title }}</td><td>{{ mission.sent_to_dg_at.strftime('%Y-%m-%d') if mission.sent_to_dg_at else '—' }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.dg_review', mission_id=mission.id) }}">عرض التقرير</a></td></tr>{% else %}<tr><td colspan="4" class="text-center text-muted">لا توجد تقارير نهائية حالياً</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

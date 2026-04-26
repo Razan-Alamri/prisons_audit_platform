@@ -1,0 +1,10 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="page-head"><h2>المراجعة المركزية - {{ mission.reference_no }}</h2></div>
+<form method="post" class="row g-4">
+  <div class="col-lg-8"><div class="panel"><h5>ملخص نتائج المناطق</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>المنطقة</th><th>الدرجة</th><th>المخاطر</th><th>الملاحظات المفتوحة</th><th>الحالة</th></tr></thead><tbody>{% for mr in mission.regions %}<tr><td>{{ mr.region.name }}</td><td>{{ mr.score_percentage }}%</td><td>{{ mr.risk_level }}</td><td>{{ mr.open_observations_count() }}</td><td>{{ mr.status }}</td></tr>{% endfor %}</tbody></table></div></div>
+    <div class="panel mt-4"><h5>صياغة التقرير</h5><div class="row g-3"><div class="col-12"><label class="form-label">الملخص النهائي</label><textarea class="form-control" rows="4" name="final_summary">{{ mission.final_summary or '' }}</textarea></div><div class="col-12"><label class="form-label">التوصيات النهائية</label><textarea class="form-control" rows="4" name="final_recommendations">{{ mission.final_recommendations or '' }}</textarea></div><div class="col-12"><label class="form-label">رأي المراجعة الداخلية</label><textarea class="form-control" rows="4" name="internal_audit_opinion">{{ mission.internal_audit_opinion or '' }}</textarea></div></div></div>
+  </div>
+  <div class="col-lg-4"><div class="panel sticky-top-panel"><label class="form-label">إجراء الإدارة المركزية</label><select class="form-select" name="central_action"><option value="save">حفظ فقط</option><option value="await_remediation">بانتظار التلافي</option><option value="send_dg">إرسال للمدير العام</option></select><button class="btn btn-success w-100 mt-3">حفظ الإجراء</button></div></div>
+</form>
+{% endblock %}

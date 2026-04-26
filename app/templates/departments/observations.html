@@ -1,0 +1,5 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="page-head"><h2>ملاحظات الإدارة المختصة</h2></div>
+<div class="panel"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>العنوان</th><th>المنطقة</th><th>الخطورة</th><th>الحالة</th><th>الاستحقاق</th><th></th></tr></thead><tbody>{% for o in observations %}<tr><td>{{ o.title }}</td><td>{{ o.mission_region.region.name }}</td><td>{{ o.severity }}</td><td>{{ o.status }}</td><td>{{ o.due_date }}</td><td><a class="btn btn-sm btn-outline-success" href="{{ url_for('missions.observation_detail', observation_id=o.id) }}">فتح</a></td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}

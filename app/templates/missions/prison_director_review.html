@@ -1,0 +1,8 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="page-head"><h2>مراجعة مدير سجون المنطقة - {{ mr.region.name }}</h2></div>
+<form method="post" class="row g-4">
+  <div class="col-lg-8"><div class="panel"><h5>الملاحظات</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>العنوان</th><th>الإدارة المختصة</th><th>الخطورة</th><th>الحالة</th><th>التحديث</th></tr></thead><tbody>{% for obs in mr.observations %}<tr><td><a href="{{ url_for('missions.observation_detail', observation_id=obs.id) }}">{{ obs.title }}</a></td><td>{{ obs.department.name if obs.department else '-' }}</td><td>{{ obs.severity }}</td><td>{{ obs_status.get(obs.status, obs.status) }}</td><td><select class="form-select" name="status_{{ obs.id }}"><option value="{{ obs.status }}">{{ obs_status.get(obs.status, obs.status) }}</option><option value="awaiting_central">بانتظار المراجعة المركزية</option><option value="awaiting_prison_director">بانتظار اعتماد مدير المنطقة</option></select></td></tr>{% endfor %}</tbody></table></div></div></div>
+  <div class="col-lg-4"><div class="panel sticky-top-panel"><label class="form-label">تعليقات مدير سجون المنطقة</label><textarea class="form-control" rows="10" name="prison_director_comments">{{ mr.prison_director_comments or '' }}</textarea><button class="btn btn-success w-100 mt-3">حفظ المراجعة</button></div></div>
+</form>
+{% endblock %}

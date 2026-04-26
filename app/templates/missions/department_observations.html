@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}ملاحظات الإدارة المختصة{% endblock %}
+{% block content %}
+<div class="section-head mb-4"><h2>الملاحظات المحالة للإدارة المختصة</h2></div>
+<div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>المنطقة</th><th>المهمة</th><th>العنوان</th><th>الخطورة</th><th>الحالة</th><th>الاستحقاق</th><th></th></tr></thead><tbody>
+{% for obs in observations %}
+<tr><td>{{ obs.mission_region.region.name }}</td><td>{{ obs.mission_region.mission.title }}</td><td>{{ obs.title }}</td><td>{{ obs.severity }}</td><td>{{ obs.status }}</td><td>{{ obs.due_date }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('missions.observation_detail', observation_id=obs.id) }}">فتح</a></td></tr>
+{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

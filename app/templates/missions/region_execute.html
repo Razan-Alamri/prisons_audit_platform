@@ -1,0 +1,74 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="hero-panel mb-4"><div class="eyebrow">تنفيذ تقرير المنطقة</div><h2 class="mb-2">{{ mr.region.name }} — {{ mr.mission.title }}</h2><p class="mb-0 text-muted">التنفيذ والتعديل متاحان فقط للمسند لهم المهمة أو للمراجعة المعتمدة حسب الدور.</p></div>
+<form method="post" enctype="multipart/form-data" class="row g-4">
+  <div class="col-xl-8">
+    <div class="form-card mb-4">
+      <h5 class="section-title">البيانات العامة للجولة</h5>
+      <div class="row g-3">
+        <div class="col-md-3"><label class="form-label">اليوم</label><input class="form-control" name="visit_day_name" value="{{ mr.visit_day_name or '' }}"></div>
+        <div class="col-md-3"><label class="form-label">التاريخ</label><input type="date" class="form-control" name="visit_date" value="{{ mr.visit_date.isoformat() if mr.visit_date else '' }}"></div>
+        <div class="col-md-3"><label class="form-label">وقت البداية</label><input type="time" class="form-control" name="visit_start_time" value="{{ mr.visit_start_time or '' }}"></div>
+        <div class="col-md-3"><label class="form-label">وقت النهاية</label><input type="time" class="form-control" name="visit_end_time" value="{{ mr.visit_end_time or '' }}"></div>
+        <div class="col-md-4"><label class="form-label">نوع الزيارة</label><select class="form-select" name="visit_type"><option value="مجدولة" {% if mr.visit_type=='مجدولة' %}selected{% endif %}>مجدولة</option><option value="عاجلة" {% if mr.visit_type=='عاجلة' %}selected{% endif %}>عاجلة</option><option value="مفاجئة" {% if mr.visit_type=='مفاجئة' %}selected{% endif %}>مفاجئة</option><option value="غير مجدولة" {% if mr.visit_type=='غير مجدولة' %}selected{% endif %}>غير مجدولة</option></select></div>
+        <div class="col-md-8"><label class="form-label">الجهة/الإدارة التي تمت زيارتها</label><input class="form-control" name="visited_entity" value="{{ mr.visited_entity or '' }}"></div>
+        <div class="col-12"><label class="form-label">ملخص التقرير</label><textarea class="form-control" rows="4" name="report_summary">{{ mr.report_summary or '' }}</textarea></div>
+        <div class="col-12"><label class="form-label">التوصيات</label><textarea class="form-control" rows="4" name="recommendations">{{ mr.recommendations or '' }}</textarea></div>
+        <div class="col-12"><label class="form-label">مرفقات التقرير</label><input type="file" class="form-control" name="report_attachments" multiple></div>
+      </div>
+    </div>
+
+    <div class="form-card mb-4">
+      <h5 class="section-title">التقييم الخماسي</h5>
+      {% set response_map = {} %}
+      {% for r in mr.responses %}{% set _ = response_map.update({r.criterion_id: r.score_label}) %}{% endfor %}
+      {% for section in mr.mission.template.sections %}
+      <div class="form-section">
+        <div class="d-flex justify-content-between mb-3"><strong>{{ section.title }}</strong><span class="badge-soft badge-status">الوزن {{ section.weight_percentage }}%</span></div>
+        {% for criterion in section.criteria %}
+        <div class="row g-3 align-items-center mb-2">
+          <div class="col-lg-8">{{ loop.index }}. {{ criterion.text }}</div>
+          <div class="col-lg-4"><select class="form-select" name="score_{{ criterion.id }}" required><option value="">اختر التقييم</option>{% for opt in score_options %}<option value="{{ opt }}" {% if response_map.get(criterion.id)==opt %}selected{% endif %}>{{ opt }}</option>{% endfor %}</select></div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="form-card mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3"><h5 class="section-title mb-0">الملاحظات والمرفقات والتوصيات</h5><span class="badge-soft badge-status">إضافة ملاحظة جديدة</span></div>
+      <div class="row g-3">
+        <div class="col-md-4"><label class="form-label">نوع الملاحظة</label><select class="form-select" name="observation_type" data-toggle-observation-type><option value="criterion">مرتبطة بمعيار</option><option value="other">ملاحظة أخرى</option></select></div>
+        <div class="col-md-8" data-criterion-box><label class="form-label">المعيار المرتبط إن وجد</label><select class="form-select" name="criterion_id"><option value="">— غير مرتبط —</option>{% for section in mr.mission.template.sections %}{% for criterion in section.criteria %}<option value="{{ criterion.id }}">{{ section.title }} — {{ criterion.text[:90] }}</option>{% endfor %}{% endfor %}</select></div>
+        <div class="col-md-6"><label class="form-label">عنوان الملاحظة</label><input class="form-control" name="obs_title"></div>
+        <div class="col-md-6"><label class="form-label">الإدارة المختصة</label><select class="form-select" name="department_id"><option value="">— اختر —</option>{% for dept in departments %}<option value="{{ dept.id }}">{{ dept.name }}</option>{% endfor %}</select></div>
+        <div class="col-12"><label class="form-label">وصف الملاحظة</label><textarea class="form-control" rows="4" name="obs_description"></textarea></div>
+        <div class="col-md-4"><label class="form-label">مستوى الخطورة</label><select class="form-select" name="severity"><option>منخفضة</option><option>متوسطة</option><option>مرتفعة</option><option>عالية</option><option>حرجة</option></select></div>
+        <div class="col-md-4"><label class="form-label">الأولوية</label><select class="form-select" name="priority"><option>عادية</option><option>مهمة</option><option>عاجلة</option><option>عاجلة جدًا</option></select></div>
+        <div class="col-md-4"><label class="form-label">SLA</label><select class="form-select" name="sla_option">{% for key,label in sla_options.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+        <div class="col-12"><label class="form-label">توصية المعالجة</label><textarea class="form-control" rows="3" name="remediation_recommendation"></textarea></div>
+        <div class="col-12"><label class="form-label">مرفقات الملاحظة</label><input type="file" class="form-control" name="observation_attachments" multiple></div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-success">حفظ التنفيذ</button>
+      {% if current_user.role in ['region_manager','central_admin','central_operator','central_director','executor'] %}
+      <button formaction="{{ url_for('missions.submit_region', mission_region_id=mr.id) }}" formmethod="post" class="btn btn-primary">رفع تقرير المنطقة</button>
+      {% endif %}
+      <a class="btn btn-outline-secondary" href="{{ url_for('missions.detail', mission_id=mr.mission_id) }}">عودة</a>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="form-card sticky-top" style="top:16px;">
+      <h5 class="section-title">بطاقة المهمة</h5>
+      <dl class="row mb-0"><dt class="col-5">المهمة</dt><dd class="col-7">{{ mr.mission.reference_no }}</dd><dt class="col-5">المنطقة</dt><dd class="col-7">{{ mr.region.name }}</dd><dt class="col-5">السجون</dt><dd class="col-7">{{ mr.prisons|map(attribute='name')|join('، ') }}</dd><dt class="col-5">المنفذون</dt><dd class="col-7">{{ mr.assignees|map(attribute='full_name')|join('، ') }}</dd><dt class="col-5">الدرجة</dt><dd class="col-7">{{ mr.score_percentage }}%</dd><dt class="col-5">المخاطر</dt><dd class="col-7">{{ mr.risk_level }}</dd></dl>
+      <hr>
+      <h6 class="fw-bold mb-3">الملاحظات الحالية</h6>
+      {% for o in mr.observations[:10] %}
+      <a class="d-block border rounded-3 p-3 mb-2 text-dark" href="{{ url_for('missions.observation_detail', observation_id=o.id) }}"><strong>{{ o.title }}</strong><div class="small text-muted">{{ o.severity }} — {{ o.status }}</div></a>
+      {% else %}<div class="text-muted small">لا توجد ملاحظات بعد.</div>{% endfor %}
+    </div>
+  </div>
+</form>
+{% endblock %}

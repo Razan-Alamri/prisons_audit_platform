@@ -1,0 +1,141 @@
+{% extends 'layouts/base.html' %}
+{% block title %}إدارة النماذج{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <h2 class="mb-0">إدارة النماذج</h2>
+  <a class="btn btn-success" href="{{ url_for('templates_admin.create') }}">
+    <i class="bi bi-plus-circle"></i>
+    <span>إنشاء نموذج جديد</span>
+  </a>
+</div>
+
+<div class="stats-grid mb-4 stats-grid--compact">
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-ui-checks-grid"></i></div>
+    <span>إجمالي النماذج</span>
+    <strong>{{ stats.total }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-check-circle"></i></div>
+    <span>النماذج المفعلة</span>
+    <strong>{{ stats.active }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-pause-circle"></i></div>
+    <span>النماذج المعطلة</span>
+    <strong>{{ stats.inactive }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-diagram-3"></i></div>
+    <span>إجمالي الأهداف</span>
+    <strong>{{ stats.sections }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-list-check"></i></div>
+    <span>إجمالي المعايير</span>
+    <strong>{{ stats.criteria }}</strong>
+  </div>
+</div>
+
+<div class="panel panel-wide listing-panel mb-4">
+  <form method="get" class="listing-filters auto-submit-form">
+    <div class="listing-filter listing-filter--search">
+      <label class="form-label">بحث</label>
+      <div class="input-group">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input
+          class="form-control"
+          type="text"
+          name="search"
+          value="{{ filters.search }}"
+          placeholder="ابحث باسم النموذج أو الكود">
+      </div>
+    </div>
+
+    <div class="listing-filter">
+      <label class="form-label">الحالة</label>
+      <select class="form-select" name="status">
+        <option value="">الكل</option>
+        <option value="active" {% if filters.status == 'active' %}selected{% endif %}>مفعل</option>
+        <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>معطل</option>
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="panel panel-wide listing-panel">
+  <div class="listing-table-wrap">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle listing-table">
+        <thead>
+          <tr>
+            <th>اسم النموذج</th>
+            <th>الكود</th>
+            <th>عدد الأهداف</th>
+            <th>عدد المعايير</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in templates %}
+          <tr>
+            <td>
+              <a class="fw-bold text-decoration-none listing-link" href="{{ url_for('templates_admin.detail', template_id=t.id) }}">
+                <i class="bi bi-ui-checks-grid me-1"></i>
+                {{ t.name }}
+              </a>
+              {% if t.description %}
+              <div class="small text-muted mt-1">{{ t.description }}</div>
+              {% endif %}
+            </td>
+            <td><span class="text-muted">{{ t.code }}</span></td>
+            <td>{{ t.sections|length }}</td>
+            <td>{{ t.sections|map(attribute='criteria')|map('length')|sum }}</td>
+            <td>
+              {% if t.is_active %}
+              <span class="badge text-bg-success">مفعل</span>
+              {% else %}
+              <span class="badge text-bg-secondary">معطل</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-5">لا توجد نماذج مطابقة للخيارات الحالية.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.querySelector('.auto-submit-form');
+  if (!form) return;
+
+  const selects = form.querySelectorAll('select');
+  const searchInput = form.querySelector('input[name="search"]');
+
+  selects.forEach((el) => {
+    el.addEventListener('change', function () {
+      form.submit();
+    });
+  });
+
+  let searchTimer = null;
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => form.submit(), 450);
+    });
+  }
+});
+</script>
+{% endblock %}

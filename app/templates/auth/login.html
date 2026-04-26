@@ -1,0 +1,44 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %}تسجيل الدخول{% endblock %}
+
+{% block content %}
+<div class="login-shell">
+  <div class="login-card">
+
+    <div class="login-brand">
+      <img src="{{ url_for('static', filename='img/شعار_المديرية_العامة_للسجون_السعودية_(2020).png') }}" alt="شعار السجون">
+      <div class="login-brand-text">
+        <h1>تسجيل الدخول</h1>
+        <p>منصة المراجعة الداخلية والرقابة وقياس المخاطر بالسجون</p>
+      </div>
+    </div>
+
+    <form method="post" class="row g-3 login-form">
+      <div class="col-12">
+        <label class="form-label">اسم المستخدم</label>
+        <div class="input-icon">
+          <i class="bi bi-person"></i>
+          <input class="form-control form-control-lg" name="username" placeholder="أدخل اسم المستخدم" required>
+        </div>
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">كلمة المرور</label>
+        <div class="input-icon">
+          <i class="bi bi-lock"></i>
+          <input type="password" class="form-control form-control-lg" name="password" placeholder="أدخل كلمة المرور" required>
+        </div>
+      </div>
+
+      <div class="col-12 d-grid mt-2">
+        <button class="btn login-btn btn-lg" type="submit">
+          <i class="bi bi-box-arrow-in-left"></i>
+          <span>دخول</span>
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

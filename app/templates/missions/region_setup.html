@@ -1,0 +1,110 @@
+{% extends 'layouts/base.html' %}
+{% block title %}تجهيز المنطقة{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="mb-1">{{ mr.region.name }}</h2>
+    <p class="text-muted mb-0">{{ mr.mission.title }}</p>
+  </div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('missions.detail', mission_id=mr.mission_id) }}">
+    <i class="bi bi-arrow-right-circle"></i>
+    <span>العودة للمهمة</span>
+  </a>
+</div>
+
+<form method="post" class="row g-4">
+  <div class="col-xl-8">
+    <div class="panel panel-wide">
+      <h5 class="mb-3">اختيار السجون والمنفذين</h5>
+      <div class="text-muted small mb-4">يتم إنشاء أو تحديث تقارير السجون التابعة لهذه المنطقة من هنا.</div>
+
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <h6 class="mb-3">السجون المستهدفة</h6>
+          {% for prison in mr.region.prisons %}
+          {% set checked = false %}
+          {% for pr in mr.prison_reports %}
+            {% if pr.prison_id == prison.id %}
+              {% set checked = true %}
+            {% endif %}
+          {% endfor %}
+          <label class="check-item d-flex align-items-center justify-content-between border rounded-3 px-3 py-2 mb-2">
+            <span>{{ prison.name }}</span>
+            <input type="checkbox" name="prison_ids" value="{{ prison.id }}" {% if checked %}checked{% endif %}>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="col-lg-6">
+          <h6 class="mb-3">المنفذون</h6>
+          <div class="alert alert-light border">تعرض القائمة منفذي المنطقة بالإضافة إلى أي منفذين من إدارة المراجعة الداخلية.</div>
+
+          {% set current_assignee_ids = [] %}
+          {% for pr in mr.prison_reports %}
+            {% for user in pr.assignees %}
+              {% if user.id not in current_assignee_ids %}
+                {% set _ = current_assignee_ids.append(user.id) %}
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+
+          {% for user in users %}
+          <label class="check-item d-flex align-items-center justify-content-between border rounded-3 px-3 py-2 mb-2">
+            <div>
+              <div class="fw-bold">{{ user.full_name }}</div>
+              <div class="small text-muted">
+                {% if user.org_unit_type == 'central' %}
+                إدارة المراجعة الداخلية
+                {% else %}
+                {{ mr.region.name }}
+                {% endif %}
+              </div>
+            </div>
+            <input type="checkbox" name="assignee_ids" value="{{ user.id }}" {% if user.id in current_assignee_ids %}checked{% endif %}>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="form-label">ملاحظات المنطقة</label>
+        <textarea class="form-control" rows="4" name="region_notes">{{ mr.region_notes or '' }}</textarea>
+      </div>
+
+      <div class="mt-4 d-flex gap-2 flex-wrap">
+        <button class="btn btn-success">
+          <i class="bi bi-check2-circle"></i>
+          <span>حفظ التجهيز</span>
+        </button>
+        <a class="btn btn-light border" href="{{ url_for('missions.detail', mission_id=mr.mission_id) }}">إلغاء</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="panel panel-form">
+      <h5 class="mb-3">ملخص المنطقة</h5>
+      <dl class="row mb-0">
+        <dt class="col-5">المنطقة</dt>
+        <dd class="col-7">{{ mr.region.name }}</dd>
+
+        <dt class="col-5">الحالة</dt>
+        <dd class="col-7">{{ mr.status }}</dd>
+
+        <dt class="col-5">عدد السجون</dt>
+        <dd class="col-7">{{ mr.region.prisons|length }}</dd>
+
+        <dt class="col-5">تقارير السجون</dt>
+        <dd class="col-7">{{ mr.prison_reports|length }}</dd>
+
+        <dt class="col-5">نسبة المنطقة</dt>
+        <dd class="col-7">{{ mr.score_percentage }}%</dd>
+
+        <dt class="col-5">المخاطر</dt>
+        <dd class="col-7">{{ mr.risk_level }}</dd>
+      </dl>
+    </div>
+  </div>
+</form>
+{% endblock %}

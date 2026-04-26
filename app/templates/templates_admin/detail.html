@@ -1,0 +1,300 @@
+{% extends 'layouts/base.html' %}
+{% block title %}{{ template.name }}{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="mb-1 d-flex align-items-center gap-2">
+      <i class="bi bi-ui-checks-grid text-success"></i>
+      <span>{{ template.name }}</span>
+    </h2>
+    <p class="text-muted mb-0">
+      <i class="bi bi-hash me-1"></i>
+      {{ template.code }}{% if template.description %} — {{ template.description }}{% endif %}
+    </p>
+  </div>
+
+  <div class="d-flex gap-2 flex-wrap">
+    <a class="btn btn-outline-dark" href="{{ url_for('templates_admin.history', template_id=template.id) }}">
+      <i class="bi bi-clock-history"></i>
+      <span>سجل التعديلات</span>
+    </a>
+
+    <form method="post" class="d-inline">
+      <input type="hidden" name="action" value="toggle_template">
+      <button class="btn {% if template.is_active %}btn-outline-secondary{% else %}btn-outline-success{% endif %}">
+        <i class="bi {% if template.is_active %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
+        <span>{% if template.is_active %}تعطيل النموذج{% else %}تفعيل النموذج{% endif %}</span>
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-4 align-items-start">
+  <div class="col-12 col-xl-4">
+    <div class="panel panel-form mb-4">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-card-text text-success"></i>
+        <span>بيانات النموذج</span>
+      </h5>
+
+      <form method="post" class="row g-3">
+        <input type="hidden" name="action" value="update_template">
+
+        <div class="col-12">
+          <label class="form-label">اسم النموذج</label>
+          <input class="form-control" name="name" value="{{ template.name }}" required>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">الكود</label>
+          <input class="form-control" name="code" value="{{ template.code }}" required>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">الوصف</label>
+          <textarea class="form-control" rows="4" name="description">{{ template.description or '' }}</textarea>
+        </div>
+
+        <div class="col-12 d-grid">
+          <button class="btn btn-primary">
+            <i class="bi bi-check2-circle"></i>
+            <span>حفظ بيانات النموذج</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel panel-form mb-4">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-plus-square text-success"></i>
+          <span>إضافة هدف</span>
+        </h5>
+        <span class="badge text-bg-light border">
+          <i class="bi bi-percent me-1"></i>
+          إجمالي الأوزان الحالي: {{ template.total_weight }}%
+        </span>
+      </div>
+
+      <form method="post" class="row g-3">
+        <input type="hidden" name="action" value="add_section">
+
+        <div class="col-12">
+          <label class="form-label">اسم الهدف</label>
+          <input class="form-control" name="title" placeholder="مثال: الجاهزية التشغيلية" required>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">الوزن</label>
+          <input class="form-control" name="weight_percentage" placeholder="مثال: 25" required>
+        </div>
+
+        <div class="col-12 d-grid">
+          <button class="btn btn-success">
+            <i class="bi bi-plus-circle"></i>
+            <span>إضافة الهدف</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel panel-form">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-sliders text-success"></i>
+        <span>الأوزان</span>
+      </h5>
+
+      <form method="post" class="row g-2">
+        <input type="hidden" name="action" value="update_weights">
+
+        {% for section in template.sections %}
+        <div class="col-12">
+          <label class="form-label d-flex justify-content-between">
+            <span>{{ section.title }}</span>
+            <span class="text-muted small">%</span>
+          </label>
+          <input class="form-control" name="weight_{{ section.id }}" value="{{ section.weight_percentage }}">
+        </div>
+        {% endfor %}
+
+        <div class="col-12">
+          <div class="small text-muted d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle"></i>
+            <span>يشترط أن يكون المجموع = 100% عند الحفظ النهائي.</span>
+          </div>
+        </div>
+
+        <div class="col-12 d-grid mt-2">
+          <button class="btn btn-dark">
+            <i class="bi bi-check2-square"></i>
+            <span>حفظ الأوزان النهائية</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-12 col-xl-8">
+    <div class="panel panel-wide">
+      <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+          <h5 class="mb-0 d-flex align-items-center gap-2">
+            <i class="bi bi-diagram-3 text-success"></i>
+            <span>الأهداف والمعايير</span>
+          </h5>
+        </div>
+      </div>
+
+      {% for section in template.sections %}
+      <div class="goal-card mb-4">
+        <div class="goal-card__header">
+          <div>
+            <h6 class="goal-card__title d-flex align-items-center gap-2">
+              <i class="bi bi-bullseye text-success"></i>
+              <span>{{ section.title }}</span>
+            </h6>
+            <div class="goal-card__meta">
+              <i class="bi bi-percent me-1"></i>
+              وزن الهدف: {{ section.weight_percentage }}%
+            </div>
+          </div>
+
+          <div class="dropdown">
+            <button class="btn btn-light border btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-three-dots"></i>
+              <span>إجراءات الهدف</span>
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li>
+                <button class="dropdown-item" type="button" data-bs-toggle="collapse"
+                  data-bs-target="#edit-section-{{ section.id }}">
+                  <i class="bi bi-pencil-square me-2"></i>
+                  تحرير الهدف والمعايير
+                </button>
+              </li>
+
+              <li><hr class="dropdown-divider"></li>
+
+              <li>
+                <form method="post" onsubmit="return confirm('هل أنت متأكد من حذف هذا الهدف وكل المعايير التابعة له؟');">
+                  <input type="hidden" name="action" value="delete_section">
+                  <input type="hidden" name="section_id" value="{{ section.id }}">
+                  <button class="dropdown-item text-danger">
+                    <i class="bi bi-trash me-2"></i>
+                    حذف الهدف
+                  </button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="criteria-preview-list">
+          {% for c in section.criteria %}
+          <div class="criteria-preview-item">
+            <i class="bi bi-check2"></i>
+            <span>{{ c.text }}</span>
+          </div>
+          {% else %}
+          <div class="text-muted d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle"></i>
+            <span>لا توجد معايير لهذا الهدف بعد.</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="collapse mt-3" id="edit-section-{{ section.id }}">
+          <div class="goal-card__editor">
+            <form method="post" class="row g-3">
+              <input type="hidden" name="action" value="edit_section_full">
+              <input type="hidden" name="section_id" value="{{ section.id }}">
+
+              <div class="col-md-8">
+                <label class="form-label">اسم الهدف</label>
+                <input class="form-control" name="title" value="{{ section.title }}" required>
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label">الوزن</label>
+                <input class="form-control" name="weight_percentage" value="{{ section.weight_percentage }}" required>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label mb-2 d-flex align-items-center gap-2">
+                  <i class="bi bi-list-check text-success"></i>
+                  <span>المعايير الحالية</span>
+                </label>
+
+                <div class="edit-criteria-list">
+                  {% for c in section.criteria %}
+                  <div class="edit-criteria-row">
+                    <input type="hidden" name="criterion_id" value="{{ c.id }}">
+                    <div class="flex-grow-1">
+                      <input class="form-control" name="criterion_text" value="{{ c.text }}">
+                    </div>
+                    <div class="form-check delete-check">
+                      <input class="form-check-input" type="checkbox" name="delete_criterion_ids" value="{{ c.id }}"
+                        id="del-{{ c.id }}">
+                      <label class="form-check-label text-danger small" for="del-{{ c.id }}">حذف</label>
+                    </div>
+                  </div>
+                  {% else %}
+                  <div class="text-muted small d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle"></i>
+                    <span>لا توجد معايير حالية.</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <div class="col-12">
+                <label class="form-label mb-2 d-flex align-items-center gap-2">
+                  <i class="bi bi-plus-circle text-success"></i>
+                  <span>إضافة معايير جديدة</span>
+                </label>
+
+                <div class="new-criteria-list" id="new-criteria-list-{{ section.id }}">
+                  <div class="new-criterion-row">
+                    <input class="form-control" name="new_criteria" placeholder="أدخل نص معيار جديد">
+                  </div>
+                </div>
+
+                <button class="btn btn-sm btn-outline-success mt-2" type="button"
+                  onclick="addCriterionInput({{ section.id }})">
+                  <i class="bi bi-plus-circle"></i>
+                  <span>إضافة معيار آخر</span>
+                </button>
+              </div>
+
+              <div class="col-12 d-flex justify-content-end gap-2">
+                <button class="btn btn-primary">
+                  <i class="bi bi-check2-circle"></i>
+                  <span>حفظ التعديلات</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-muted d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle"></i>
+        <span>لا توجد أهداف حتى الآن. ابدأ بإضافة هدف جديد.</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+  function addCriterionInput(sectionId) {
+    const container = document.getElementById(`new-criteria-list-${sectionId}`);
+    const row = document.createElement('div');
+    row.className = 'new-criterion-row mt-2';
+    row.innerHTML = `<input class="form-control" name="new_criteria" placeholder="أدخل نص معيار جديد">`;
+    container.appendChild(row);
+  }
+</script>
+{% endblock %}
