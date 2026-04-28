@@ -256,14 +256,16 @@ class MissionRegion(TimestampMixin, db.Model):
 
     @property
     def score_percentage(self):
-        if not self.prison_reports:
-            return 0
-        values = [p.score_percentage for p in self.prison_reports]
-        return round(sum(values) / len(values), 2)
+        scored_reports = [p.score_percentage for p in self.prison_reports if p.has_started]
+        if not scored_reports:
+            return None
+        return round(sum(scored_reports) / len(scored_reports), 2)
 
     @property
     def risk_level(self):
         score = self.score_percentage
+        if score is None:
+            return None
         if score >= 85:
             return 'منخفضة'
         if score >= 70:
@@ -271,6 +273,18 @@ class MissionRegion(TimestampMixin, db.Model):
         if score >= 50:
             return 'مرتفعة'
         return 'حرجة'
+
+    @property
+    def status_label(self):
+        return MISSION_REGION_STATUS_LABELS.get(self.status, self.status)
+
+    @property
+    def completed_prisons_count(self):
+        return sum(1 for p in self.prison_reports if p.status == 'submitted')
+
+    @property
+    def started_prisons_count(self):
+        return sum(1 for p in self.prison_reports if p.has_started)
 
     def open_observations_count(self):
         return sum(p.open_observations_count() for p in self.prison_reports)
@@ -293,6 +307,9 @@ class MissionPrisonReport(TimestampMixin, db.Model):
     report_summary = db.Column(db.Text)
     recommendations = db.Column(db.Text)
     submitted_at = db.Column(db.DateTime)
+
+    central_comment = db.Column(db.Text)
+    central_commented_at = db.Column(db.DateTime)
 
     score_percentage_value = db.Column(db.Float, default=0, nullable=False)
 
@@ -320,6 +337,17 @@ class MissionPrisonReport(TimestampMixin, db.Model):
         viewonly=True
     )
 
+    @property
+    def has_started(self):
+        return bool(
+            self.visit_date or
+            self.responses or
+            self.observations or
+            self.report_summary or
+            self.recommendations or
+            self.status in ['in_progress', 'submitted']
+        )
+
     def calculate_score_percentage(self):
         template = self.mission_region.mission.template
         if not template or not template.sections:
@@ -339,6 +367,8 @@ class MissionPrisonReport(TimestampMixin, db.Model):
 
     @property
     def score_percentage(self):
+        if not self.has_started:
+            return None
         return round(self.score_percentage_value or 0, 2)
 
     def refresh_score(self):
@@ -347,7 +377,9 @@ class MissionPrisonReport(TimestampMixin, db.Model):
 
     @property
     def risk_level(self):
-        score = self.score_percentage_value or 0
+        score = self.score_percentage
+        if score is None:
+            return None
         if score >= 85:
             return 'منخفضة'
         if score >= 70:
@@ -355,6 +387,10 @@ class MissionPrisonReport(TimestampMixin, db.Model):
         if score >= 50:
             return 'مرتفعة'
         return 'حرجة'
+
+    @property
+    def status_label(self):
+        return MISSION_PRISON_REPORT_STATUS_LABELS.get(self.status, self.status)
 
     def open_observations_count(self):
         return sum(1 for o in self.observations if o.status not in ('closed', 'resolved'))
@@ -443,7 +479,7 @@ OBS_STATUS = {
     'sent_to_department': 'محالة للإدارة المختصة',
     'under_treatment': 'قيد المعالجة',
     'awaiting_prison_director': 'بانتظار اعتماد مدير المنطقة',
-    'awaiting_central': 'بانتظار المراجعة المركزية',
+    'awaiting_central': 'بانتظار مراجعة إدارة المراجعة الداخلية',
     'resolved': 'تم التلافي',
     'closed': 'مغلقة',
 }
@@ -474,7 +510,7 @@ PRIORITY_LEVELS = {
 ASSIGNMENT_MODES = {
     'region_manager_selects': 'يترك لمدير شعبة المراجعة بالمنطقة',
     'central_defined': 'يحدد من إدارة المراجعة الداخلية',
-    'central_with_region_completion': 'إسناد مركزي مع استكمال من المنطقة',
+    'central_with_region_completion': 'إسناد من إدارة المراجعة الداخلية مع استكمال من المنطقة',
 }
 
 ROLE_LABELS = {
@@ -514,6 +550,20 @@ MISSION_STATUS_LABELS = {
 
 ASSIGNMENT_MODE_LABELS = {
     'region_manager_selects': 'يترك لمدير المنطقة',
-    'central_defined': 'إسناد مركزي',
-    'central_with_region_completion': 'إسناد مركزي مع استكمال من المنطقة',
+    'central_defined': 'إسناد من إدارة المراجعة الداخلية',
+    'central_with_region_completion': 'إسناد من إدارة المراجعة الداخلية مع استكمال من المنطقة',
+}
+
+MISSION_REGION_STATUS_LABELS = {
+    'pending_region_setup': 'بانتظار التجهيز',
+    'assigned': 'مجهزة',
+    'in_progress': 'قيد التنفيذ',
+    'submitted_to_central': 'مرفوعة إلى إدارة المراجعة الداخلية',
+}
+
+MISSION_PRISON_REPORT_STATUS_LABELS = {
+    'pending_assignment': 'بانتظار الإسناد',
+    'assigned': 'مسندة',
+    'in_progress': 'قيد التنفيذ',
+    'submitted': 'مرفوعة',
 }
