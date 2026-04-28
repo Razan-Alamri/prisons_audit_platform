@@ -36,15 +36,15 @@
       </div>
 
       <div class="side-group">
-        <div class="side-caption">التنقل الرئيسي</div>
+        <!-- <div class="side-caption">التنقل الرئيسي</div> -->
         <a href="{{ url_for('dashboard.home') }}" class="side-link">
           <i class="bi bi-grid"></i><span>الرئيسية</span>
         </a>
         <a href="{{ url_for('missions.index') }}" class="side-link">
-          <i class="bi bi-kanban"></i><span>المهام والتقارير</span>
+          <i class="bi bi-kanban"></i><span>المهام والجولات</span>
         </a>
         <a href="{{ url_for('reports.index') }}" class="side-link">
-          <i class="bi bi-file-earmark-bar-graph"></i><span>التقارير المجمعة</span>
+          <i class="bi bi-file-earmark-bar-graph"></i><span>التقارير والتصدير</span>
         </a>
       </div>
 
@@ -78,7 +78,7 @@
     </aside>
 
     <section class="content-shell">
-      <header class="content-header">
+      <!-- <header class="content-header">
         <div>
           <h1 class="content-title">{{ title or app_name }}</h1>
           <p class="content-subtitle mb-0">منصة موحدة لإدارة الجولات والأنشطة الرقابية والمعالجة والتقارير النهائية</p>
@@ -87,7 +87,7 @@
           <div class="small text-muted">المستخدم</div>
           <div class="fw-bold">{{ current_user.job_title or current_user.role }}</div>
         </div>
-      </header>
+      </header> -->
 
       <main class="content-body">
         {% with messages = get_flashed_messages(with_categories=true) %}
