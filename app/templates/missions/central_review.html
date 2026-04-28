@@ -1,10 +1,163 @@
 {% extends 'layouts/base.html' %}
+{% block title %}إعداد التقرير النهائي{% endblock %}
+
 {% block content %}
-<div class="page-head"><h2>المراجعة المركزية - {{ mission.reference_no }}</h2></div>
-<form method="post" class="row g-4">
-  <div class="col-lg-8"><div class="panel"><h5>ملخص نتائج المناطق</h5><div class="table-responsive"><table class="table align-middle"><thead><tr><th>المنطقة</th><th>الدرجة</th><th>المخاطر</th><th>الملاحظات المفتوحة</th><th>الحالة</th></tr></thead><tbody>{% for mr in mission.regions %}<tr><td>{{ mr.region.name }}</td><td>{{ mr.score_percentage }}%</td><td>{{ mr.risk_level }}</td><td>{{ mr.open_observations_count() }}</td><td>{{ mr.status }}</td></tr>{% endfor %}</tbody></table></div></div>
-    <div class="panel mt-4"><h5>صياغة التقرير</h5><div class="row g-3"><div class="col-12"><label class="form-label">الملخص النهائي</label><textarea class="form-control" rows="4" name="final_summary">{{ mission.final_summary or '' }}</textarea></div><div class="col-12"><label class="form-label">التوصيات النهائية</label><textarea class="form-control" rows="4" name="final_recommendations">{{ mission.final_recommendations or '' }}</textarea></div><div class="col-12"><label class="form-label">رأي المراجعة الداخلية</label><textarea class="form-control" rows="4" name="internal_audit_opinion">{{ mission.internal_audit_opinion or '' }}</textarea></div></div></div>
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="mb-1 d-flex align-items-center gap-2">
+      <i class="bi bi-journal-check text-success"></i>
+      <span>إعداد التقرير النهائي</span>
+    </h2>
+    <p class="text-muted mb-0">
+      {{ mission.reference_no }} — {{ mission.title }}
+    </p>
   </div>
-  <div class="col-lg-4"><div class="panel sticky-top-panel"><label class="form-label">إجراء الإدارة المركزية</label><select class="form-select" name="central_action"><option value="save">حفظ فقط</option><option value="await_remediation">بانتظار التلافي</option><option value="send_dg">إرسال للمدير العام</option></select><button class="btn btn-success w-100 mt-3">حفظ الإجراء</button></div></div>
-</form>
+
+  <div class="d-flex flex-wrap gap-2">
+    <span class="badge-soft badge-status">
+      <i class="bi bi-kanban"></i>
+      {{ MISSION_STATUS_LABELS.get(mission.status, mission.status) }}
+    </span>
+
+    <span class="badge-soft
+      {% if mission.priority_level == 'critical' %}badge-risk-critical
+      {% elif mission.priority_level == 'high' %}badge-risk-high
+      {% elif mission.priority_level == 'medium' %}badge-risk-med
+      {% else %}badge-risk-low{% endif %}">
+      <i class="bi bi-flag"></i>
+      {{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}
+    </span>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="panel panel-wide mission-central-panel mb-4">
+      <div class="mission-central-panel__head">
+        <h5 class="mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-diagram-3 text-success"></i>
+          <span>ملخص نتائج المناطق</span>
+        </h5>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mission-central-table mb-0">
+          <thead>
+            <tr>
+              <th>المنطقة</th>
+              <th>الحالة</th>
+              <th>عدد السجون</th>
+              <th>الدرجة</th>
+              <th>المخاطر</th>
+              <th>الملاحظات المفتوحة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mr in mission.regions %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="central-table-icon"><i class="bi bi-geo-alt"></i></span>
+                  <strong>{{ mr.region.name }}</strong>
+                </div>
+              </td>
+              <td>
+                <span class="badge-soft badge-status">
+                  {{ MISSION_REGION_STATUS_LABELS.get(mr.status, mr.status) }}
+                </span>
+              </td>
+              <td>{{ mr.prison_reports|length }}</td>
+              <td>
+                {% if mr.score_percentage is not none %}
+                  {{ mr.score_percentage }}%
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if mr.risk_level %}
+                <span class="badge-soft
+                  {% if mr.risk_level == 'منخفضة' %}badge-risk-low
+                  {% elif mr.risk_level == 'متوسطة' %}badge-risk-med
+                  {% elif mr.risk_level == 'مرتفعة' %}badge-risk-high
+                  {% else %}badge-risk-critical{% endif %}">
+                  {{ mr.risk_level }}
+                </span>
+                {% else %}
+                <span class="badge-soft badge-neutral">لم يبدأ</span>
+                {% endif %}
+              </td>
+              <td>{{ mr.open_observations_count() }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-5">لا توجد بيانات مناطق.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel panel-wide mission-central-panel">
+      <div class="mission-central-panel__head">
+        <h5 class="mb-0 d-flex align-items-center gap-2">
+          <i class="bi bi-pencil-square text-success"></i>
+          <span>صياغة التقرير</span>
+        </h5>
+      </div>
+
+      <div class="p-4">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">الملخص التنفيذي</label>
+            <textarea class="form-control" rows="4" name="final_summary" placeholder="مثال: نُفذت المهمة على عدد من المناطق المستهدفة، وأظهرت النتائج تفاوتًا في مستوى الالتزام مع وجود ملاحظات تستلزم المعالجة والمتابعة.">{{ mission.final_summary or '' }}</textarea>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">أبرز النتائج والملاحظات</label>
+            <textarea class="form-control" rows="5" name="internal_audit_opinion" placeholder="مثال: تركزت أبرز الملاحظات في الجوانب التشغيلية والتوثيقية، مع تفاوت بين المناطق في سرعة الإغلاق ومستوى المعالجة.">{{ mission.internal_audit_opinion or '' }}</textarea>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">القرار / التوصية النهائية</label>
+            <textarea class="form-control" rows="4" name="final_recommendations" placeholder="مثال: يوصى بإعادة بعض الملاحظات للتلافي واستكمال المعالجة قبل الرفع النهائي، مع اعتماد المناطق المستوفية.">{{ mission.final_recommendations or '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <form method="post" class="panel panel-form mission-central-side sticky-top" style="top:16px;">
+      <h5 class="mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-sliders text-success"></i>
+        <span>اعتماد الإجراء</span>
+      </h5>
+
+      <div class="mb-3">
+        <label class="form-label">الإجراء المطلوب</label>
+        <select class="form-select" name="central_action">
+          <option value="save">حفظ المسودة</option>
+          <option value="await_remediation" {% if mission.status == 'awaiting_remediation' %}selected{% endif %}>إعادة للتلافي</option>
+          <option value="send_dg" {% if mission.status == 'ready_for_dg' %}selected{% endif %}>رفع للمدير العام</option>
+        </select>
+      </div>
+
+      <div class="mission-central-side__note">
+        <i class="bi bi-info-circle"></i>
+        <span>
+          استخدم هذه الصفحة لتجميع النتائج وصياغة التقرير المختصر قبل اعتماد الإجراء النهائي.
+        </span>
+      </div>
+
+      <div class="d-grid mt-3">
+        <button class="btn btn-success">
+          <i class="bi bi-check2-circle"></i>
+          <span>حفظ الإجراء</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

@@ -2,15 +2,89 @@
 {% block title %}تفاصيل المهمة{% endblock %}
 
 {% block content %}
-<div class="hero-panel mb-4">
-  <div class="eyebrow">تفاصيل المهمة</div>
-  <div class="d-flex flex-wrap justify-content-between gap-3 align-items-start">
-    <div>
-      <h2 class="mb-2">{{ mission.title }}</h2>
-      <div class="text-muted">
-        {{ mission.reference_no }} — {{ mission.template.name }} — {{ mission.overall_status_label() }}
-      </div>
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="mb-1 d-flex align-items-center gap-2">
+      <i class="bi bi-kanban text-success"></i>
+      <span>{{ mission.title }}</span>
+    </h2>
+    <p class="text-muted mb-0">
+      {{ mission.reference_no }} — {{ mission.template.name }} — {{ MISSION_STATUS_LABELS.get(mission.status,
+      mission.status) }}
+    </p>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2">
+    <div class="dropdown">
+      <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-download"></i>
+        <span>تصدير</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <a class="dropdown-item" href="{{ url_for('reports.mission_excel', mission_id=mission.id) }}">
+            <i class="bi bi-file-earmark-excel me-2"></i>
+            Excel
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item" href="{{ url_for('reports.mission_pdf', mission_id=mission.id) }}">
+            <i class="bi bi-file-earmark-pdf me-2"></i>
+            PDF
+          </a>
+        </li>
+      </ul>
     </div>
+
+    <a class="btn btn-outline-secondary" href="{{ url_for('missions.history', mission_id=mission.id) }}">
+      <i class="bi bi-clock-history"></i>
+      <span>سجل التتبع</span>
+    </a>
+
+    {% if current_user.role in ['central_admin','central_operator','central_director'] %}
+    <a class="btn btn-success" href="{{ url_for('missions.central_review', mission_id=mission.id) }}">
+      <i class="bi bi-journal-check"></i>
+      <span>إعداد التقرير النهائي</span>
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="stats-grid mb-4 stats-grid--compact mission-detail-kpis">
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-diagram-3"></i></div>
+    <span>المناطق</span>
+    <strong>{{ summary_kpis.regions_count }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-building"></i></div>
+    <span>تقارير السجون</span>
+    <strong>{{ summary_kpis.prisons_count }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-play-circle"></i></div>
+    <span>التقارير التي بدأ تنفيذها</span>
+    <strong>{{ summary_kpis.started_count }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-upload"></i></div>
+    <span>التقارير المرفوعة</span>
+    <strong>{{ summary_kpis.submitted_count }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-exclamation-circle"></i></div>
+    <span>الملاحظات المفتوحة</span>
+    <strong>{{ summary_kpis.open_observations_count }}</strong>
+  </div>
+
+  <div class="stat-card stat-card--icon">
+    <div class="stat-card__icon"><i class="bi bi-shield-check"></i></div>
+    <span>مؤشر الالتزام</span>
+    <strong>{{ summary_kpis.compliance_percentage }}%</strong>
   </div>
 </div>
 
@@ -26,22 +100,70 @@
 
       {% for mr in mission.regions %}
       <div class="mission-region-block border-bottom">
-        <div class="p-3 bg-light-subtle border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <div>
-            <strong>{{ mr.region.name }}</strong>
-            <div class="small text-muted">
-              حالة المنطقة: {{ mr.status }}
+        <div class="p-3 mission-region-head d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="mission-region-head__icon">
+              <i class="bi bi-geo-alt"></i>
+            </div>
+
+            <div>
+              <strong class="d-block fs-6">{{ mr.region.name }}</strong>
+              <div class="small text-muted d-flex align-items-center gap-2 flex-wrap mt-1">
+                <span>حالة المنطقة:</span>
+                <span class="badge-soft badge-status">
+                  {{ mr.status_label if mr.status_label else '—' }}
+                </span>
+              </div>
             </div>
           </div>
-          <div>
-            <span class="badge-soft {% if mr.risk_level == 'منخفضة' %}badge-risk-low{% elif mr.risk_level == 'متوسطة' %}badge-risk-med{% elif mr.risk_level == 'مرتفعة' %}badge-risk-high{% else %}badge-risk-critical{% endif %}">
+
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            {% if mr.score_percentage is not none %}
+            <span class="badge-soft badge-score">
+              <i class="bi bi-percent"></i>
+              {{ mr.score_percentage }}%
+            </span>
+            {% else %}
+            <span class="badge-soft badge-neutral">
+              <i class="bi bi-dash-circle"></i>
+              لم يبدأ
+            </span>
+            {% endif %}
+
+            {% if mr.risk_level %}
+            <span class="badge-soft
+              {% if mr.risk_level == 'منخفضة' %}badge-risk-low
+              {% elif mr.risk_level == 'متوسطة' %}badge-risk-med
+              {% elif mr.risk_level == 'مرتفعة' %}badge-risk-high
+              {% elif mr.risk_level == 'حرجة' %}badge-risk-critical
+              {% else %}badge-status{% endif %}">
               {{ mr.risk_level }}
             </span>
+            {% else %}
+            <span class="badge-soft badge-neutral">لم يبدأ</span>
+            {% endif %}
+
+            {% if current_user.role in ['region_manager','central_admin','central_operator','central_director'] %}
+            <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
+              data-bs-target="#regionSetupModal{{ mr.id }}">
+              <i class="bi bi-sliders"></i>
+              <span>تجهيز المنطقة</span>
+            </button>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mission-region-summary px-3 py-2 border-top border-bottom">
+          <div class="d-flex flex-wrap gap-3 small text-muted">
+            <span>عدد السجون: <strong class="text-dark">{{ mr.prison_reports|length }}</strong></span>
+            <span>السجون المنجزة: <strong class="text-dark">{{ mr.completed_prisons_count }}</strong></span>
+            <span>بدأ التنفيذ: <strong class="text-dark">{{ mr.started_prisons_count }}</strong></span>
+            <span>الملاحظات المفتوحة: <strong class="text-dark">{{ mr.open_observations_count() }}</strong></span>
           </div>
         </div>
 
         <div class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0 mission-region-table">
             <thead>
               <tr>
                 <th>السجن</th>
@@ -55,20 +177,52 @@
             <tbody>
               {% for pr in mr.prison_reports %}
               <tr>
-                <td>{{ pr.prison.name }}</td>
-                <td>{{ pr.assignees|map(attribute='full_name')|join('، ') or '—' }}</td>
-                <td>{{ pr.score_percentage }}%</td>
                 <td>
-                  <span class="badge-soft {% if pr.risk_level == 'منخفضة' %}badge-risk-low{% elif pr.risk_level == 'متوسطة' %}badge-risk-med{% elif pr.risk_level == 'مرتفعة' %}badge-risk-high{% else %}badge-risk-critical{% endif %}">
+                  <a class="fw-bold text-decoration-none listing-link"
+                    href="{{ url_for('missions.prison_report_view', prison_report_id=pr.id) }}">
+                    <i class="bi bi-building me-1"></i>
+                    {{ pr.prison.name }}
+                  </a>
+                </td>
+
+                <td>{{ pr.assignees|map(attribute='full_name')|join('، ') or '—' }}</td>
+
+                <td>
+                  {% if pr.score_percentage is not none %}
+                  {{ pr.score_percentage }}%
+                  {% else %}
+                  <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if pr.risk_level %}
+                  <span class="badge-soft
+                    {% if pr.risk_level == 'منخفضة' %}badge-risk-low
+                    {% elif pr.risk_level == 'متوسطة' %}badge-risk-med
+                    {% elif pr.risk_level == 'مرتفعة' %}badge-risk-high
+                    {% elif pr.risk_level == 'حرجة' %}badge-risk-critical
+                    {% else %}badge-status{% endif %}">
                     {{ pr.risk_level }}
                   </span>
+                  {% else %}
+                  <span class="badge-soft badge-neutral">لم يبدأ</span>
+                  {% endif %}
                 </td>
+
                 <td>{{ pr.observations|length }}</td>
-                <td>{{ pr.status }}</td>
+
+                <td>
+                  <span class="badge-soft badge-status">
+                    {{ pr.status_label if pr.status_label else '—' }}
+                  </span>
+                </td>
               </tr>
               {% else %}
               <tr>
-                <td colspan="6" class="text-center text-muted">لا توجد تقارير سجون لهذه المنطقة حتى الآن.</td>
+                <td colspan="6" class="text-center text-muted py-4">
+                  لا توجد تقارير سجون لهذه المنطقة حتى الآن.
+                </td>
               </tr>
               {% endfor %}
             </tbody>
@@ -79,84 +233,155 @@
       <div class="p-4 text-center text-muted">لا توجد مناطق مرتبطة بهذه المهمة.</div>
       {% endfor %}
     </div>
-
-    <div class="table-card p-0 overflow-hidden">
-      <div class="p-3 border-bottom">
-        <h5 class="mb-0 d-flex align-items-center gap-2">
-          <i class="bi bi-clock-history text-success"></i>
-          <span>سجل التتبع والنشاط</span>
-        </h5>
-      </div>
-      <div class="p-3 timeline timeline-modern">
-        {% for log in entity_logs %}
-        <div class="timeline-item-modern">
-          <div class="timeline-item-modern__dot">
-            <i class="bi bi-activity"></i>
-          </div>
-          <div class="timeline-item-modern__content">
-            <h6 class="mb-2">{{ log.action }}</h6>
-            <div class="timeline-note mb-2">{{ log.notes or '—' }}</div>
-            <div class="timeline-meta">
-              <span class="timeline-user">
-                <i class="bi bi-person-circle"></i>
-                {{ log.user.full_name if log.user else '—' }}
-              </span>
-              <span class="timeline-date">
-                <i class="bi bi-calendar-event"></i>
-                {{ log.created_at.strftime('%Y-%m-%d %H:%M') }}
-              </span>
-            </div>
-          </div>
-        </div>
-        {% else %}
-        <div class="empty-history-state">
-          <div class="empty-history-state__icon"><i class="bi bi-clock-history"></i></div>
-          <div class="fw-bold mb-1">لا يوجد سجل تتبع حتى الآن</div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
   </div>
 
   <div class="col-xl-4">
-    <div class="form-card mb-4">
+    <div class="form-card mission-summary-card mb-4">
       <h5 class="section-title d-flex align-items-center gap-2">
-        <i class="bi bi-info-circle text-success"></i>
-        <span>بيانات المهمة</span>
+        <i class="bi bi-card-text text-success"></i>
+        <span>ملخص المهمة</span>
       </h5>
 
-      <dl class="row mb-0">
-        <dt class="col-5">النموذج</dt>
-        <dd class="col-7">{{ mission.template.name }}</dd>
+      <div class="summary-list">
+        <div class="summary-list__item">
+          <span>المرجع</span>
+          <strong>{{ mission.reference_no }}</strong>
+        </div>
 
-        <dt class="col-5">التصنيف</dt>
-        <dd class="col-7">{{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification) }}</dd>
+        <div class="summary-list__item">
+          <span>النموذج</span>
+          <strong>{{ mission.template.name }}</strong>
+        </div>
 
-        <dt class="col-5">الأولوية</dt>
-        <dd class="col-7">{{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}</dd>
+        <div class="summary-list__item">
+          <span>التصنيف</span>
+          <strong>{{ MISSION_CLASSIFICATION_LABELS.get(mission.mission_classification, mission.mission_classification)
+            }}</strong>
+        </div>
 
-        <dt class="col-5">آلية الإسناد</dt>
-        <dd class="col-7">{{ ASSIGNMENT_MODE_LABELS.get(mission.assignment_mode, mission.assignment_mode) }}</dd>
+        <div class="summary-list__item">
+          <span>الأولوية</span>
+          <strong>{{ PRIORITY_LEVEL_LABELS.get(mission.priority_level, mission.priority_level) }}</strong>
+        </div>
 
-        <dt class="col-5">التنفيذ المستهدف</dt>
-        <dd class="col-7">{{ mission.planned_date.strftime('%Y-%m-%d') if mission.planned_date else '—' }}</dd>
+        <div class="summary-list__item">
+          <span>الحالة</span>
+          <strong>{{ MISSION_STATUS_LABELS.get(mission.status, mission.status) }}</strong>
+        </div>
 
-        <dt class="col-5">الاستحقاق</dt>
-        <dd class="col-7">{{ mission.due_date.strftime('%Y-%m-%d') if mission.due_date else '—' }}</dd>
+        <div class="summary-list__item">
+          <span>آلية الإسناد</span>
+          <strong>{{ ASSIGNMENT_MODE_LABELS.get(mission.assignment_mode, mission.assignment_mode) }}</strong>
+        </div>
 
-        <dt class="col-5">تعليمات التكليف</dt>
-        <dd class="col-7">{{ mission.task_instructions or '—' }}</dd>
+        <div class="summary-list__item">
+          <span>التنفيذ المستهدف</span>
+          <strong>{{ mission.planned_date.strftime('%Y-%m-%d') if mission.planned_date else '—' }}</strong>
+        </div>
 
-        <dt class="col-5">الملخص النهائي</dt>
-        <dd class="col-7">{{ mission.final_summary or '—' }}</dd>
+        <div class="summary-list__item">
+          <span>الاستحقاق</span>
+          <strong>{{ mission.due_date.strftime('%Y-%m-%d') if mission.due_date else '—' }}</strong>
+        </div>
+      </div>
 
-        <dt class="col-5">التوصيات</dt>
-        <dd class="col-7">{{ mission.final_recommendations or '—' }}</dd>
+      <div class="summary-text-block">
+        <div class="summary-text-block__title">تعليمات التكليف</div>
+        <div class="summary-text-block__body">
+          {{ mission.task_instructions or 'لا توجد تعليمات مضافة.' }}
+        </div>
+      </div>
 
-        <dt class="col-5">رأي المراجعة</dt>
-        <dd class="col-7">{{ mission.internal_audit_opinion or '—' }}</dd>
-      </dl>
+      <div class="summary-text-block">
+        <div class="summary-text-block__title">الملخص النهائي</div>
+        <div class="summary-text-block__body">
+          {{ mission.final_summary or '—' }}
+        </div>
+      </div>
+
+      <div class="summary-text-block">
+        <div class="summary-text-block__title">التوصيات</div>
+        <div class="summary-text-block__body">
+          {{ mission.final_recommendations or '—' }}
+        </div>
+      </div>
+
+      <div class="summary-text-block">
+        <div class="summary-text-block__title">رأي إدارة المراجعة الداخلية</div>
+        <div class="summary-text-block__body">
+          {{ mission.internal_audit_opinion or '—' }}
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+{% for region in region_summaries %}
+{% if current_user.role in ['region_manager','central_admin','central_operator','central_director'] %}
+<div class="modal fade" id="regionSetupModal{{ region.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('missions.region_setup_inline', mission_region_id=region.id) }}">
+        <div class="modal-header">
+          <h5 class="modal-title d-flex align-items-center gap-2">
+            <i class="bi bi-sliders text-success"></i>
+            <span>تجهيز منطقة {{ region.name }}</span>
+          </h5>
+          <button type="button" class="btn-close ms-0 me-auto" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-4">
+            <label class="form-label">السجون المستهدفة</label>
+            <div class="row g-2">
+              {% for prison in region_setup_data[region.id|string].prisons %}
+              <div class="col-md-6">
+                <label class="check-item d-flex align-items-center justify-content-between border rounded-3 px-3 py-2">
+                  <span>{{ prison.name }}</span>
+                  <input type="checkbox" name="prison_ids" value="{{ prison.id }}" {% if prison.id|string in
+                    region_setup_data[region.id|string].selected_prison_ids %}checked{% endif %}>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label">المنفذون</label>
+            <div class="row g-2">
+              {% for user in region_setup_data[region.id|string].users %}
+              <div class="col-md-6">
+                <label class="check-item d-flex align-items-center justify-content-between border rounded-3 px-3 py-2">
+                  <div>
+                    <div class="fw-bold">{{ user.name }}</div>
+                    <div class="small text-muted">{{ user.meta }}</div>
+                  </div>
+                  <input type="checkbox" name="assignee_ids" value="{{ user.id }}" {% if user.id|string in
+                    region_setup_data[region.id|string].selected_assignee_ids %}checked{% endif %}>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">ملاحظات المنطقة</label>
+            <textarea class="form-control" rows="4"
+              name="region_notes">{{ region_setup_data[region.id|string].region_notes }}</textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check2-circle"></i>
+            <span>حفظ التجهيز</span>
+          </button>
+          <button type="button" class="btn btn-light border" data-bs-dismiss="modal">إغلاق</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
 {% endblock %}

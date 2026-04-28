@@ -1,0 +1,270 @@
+{% extends 'layouts/base.html' %}
+{% block title %}استعراض تقرير السجن{% endblock %}
+
+{% block content %}
+<div class="page-head d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+  <div>
+    <h2 class="mb-1 d-flex align-items-center gap-2">
+      <i class="bi bi-file-earmark-text text-success"></i>
+      <span>استعراض تقرير السجن</span>
+    </h2>
+    <p class="text-muted mb-0">
+      {{ pr.prison.name }} — {{ pr.mission_region.region.name }} — {{ pr.mission_region.mission.reference_no }}
+    </p>
+  </div>
+
+  <a class="btn btn-outline-secondary" href="{{ url_for('missions.detail', mission_id=pr.mission_region.mission.id) }}">
+    <i class="bi bi-arrow-right"></i>
+    <span>العودة إلى المهمة</span>
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="form-card mb-4">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle text-success"></i>
+        <span>بيانات التقرير</span>
+      </h5>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="detail-mini-card">
+            <div class="small text-muted">المنطقة</div>
+            <div class="fw-bold">{{ pr.mission_region.region.name }}</div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="detail-mini-card">
+            <div class="small text-muted">السجن</div>
+            <div class="fw-bold">{{ pr.prison.name }}</div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="detail-mini-card">
+            <div class="small text-muted">حالة التقرير</div>
+            <div class="fw-bold">{{ pr.status_label }}</div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="detail-mini-card">
+            <div class="small text-muted">الدرجة</div>
+            <div class="fw-bold">
+              {% if pr.score_percentage is not none %}
+                {{ pr.score_percentage }}%
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="detail-mini-card">
+            <div class="small text-muted">الخطورة</div>
+            <div class="fw-bold">
+              {% if pr.risk_level %}
+                {{ pr.risk_level }}
+              {% else %}
+                لم يبدأ
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">تاريخ الزيارة</label>
+          <div class="form-control bg-light">
+            {{ pr.visit_date.strftime('%Y-%m-%d') if pr.visit_date else '—' }}
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">اليوم</label>
+          <div class="form-control bg-light">
+            {{ pr.visit_day_name or '—' }}
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">وقت البداية</label>
+          <div class="form-control bg-light">
+            {{ pr.visit_start_time or '—' }}
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">وقت النهاية</label>
+          <div class="form-control bg-light">
+            {{ pr.visit_end_time or '—' }}
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">الجهة التي تمت زيارتها</label>
+          <div class="form-control bg-light">
+            {{ pr.visited_entity or '—' }}
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">المنفذون</label>
+          <div class="form-control bg-light">
+            {{ pr.assignees|map(attribute='full_name')|join('، ') or '—' }}
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">ملخص التقرير</label>
+          <div class="form-control bg-light" style="min-height: 120px; white-space: pre-wrap;">
+            {{ pr.report_summary or '—' }}
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">التوصيات</label>
+          <div class="form-control bg-light" style="min-height: 120px; white-space: pre-wrap;">
+            {{ pr.recommendations or '—' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card mb-4">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-list-check text-success"></i>
+        <span>نتائج التقييم</span>
+      </h5>
+
+      {% for section in pr.mission_region.mission.template.sections %}
+      <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <strong>{{ section.title }}</strong>
+          <span class="badge-soft badge-status">الوزن {{ section.weight_percentage }}%</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>المعيار</th>
+                <th style="width: 180px;">التقييم</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for criterion in section.criteria %}
+              {% set ns = namespace(found=None) %}
+              {% for response in pr.responses %}
+                {% if response.criterion_id == criterion.id %}
+                  {% set ns.found = response %}
+                {% endif %}
+              {% endfor %}
+              <tr>
+                <td>{{ criterion.text }}</td>
+                <td>{{ ns.found.score_label if ns.found else '—' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-muted">لا توجد معايير مرتبطة بالنموذج.</div>
+      {% endfor %}
+    </div>
+
+    <div class="form-card">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-circle text-success"></i>
+        <span>الملاحظات</span>
+      </h5>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>العنوان</th>
+              <th>التصنيف</th>
+              <th>الإدارة المختصة</th>
+              <th>الخطورة</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obs in pr.observations %}
+            <tr>
+              <td>{{ obs.title }}</td>
+              <td>{{ obs.category }}</td>
+              <td>{{ obs.department.name if obs.department else '—' }}</td>
+              <td>{{ obs.severity }}</td>
+              <td>{{ OBS_STATUS.get(obs.status, obs.status) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">لا توجد ملاحظات على هذا التقرير.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    {% if can_comment %}
+    <div class="form-card mb-4">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-chat-left-text text-success"></i>
+        <span>تعليق الإدارة</span>
+      </h5>
+
+      <form method="post">
+        <div class="mb-3">
+          <label class="form-label">إضافة تعليق</label>
+          <textarea class="form-control" name="central_comment" rows="6">{{ pr.central_comment or '' }}</textarea>
+        </div>
+
+        <button class="btn btn-success w-100">
+          <i class="bi bi-check2-circle"></i>
+          <span>حفظ التعليق</span>
+        </button>
+      </form>
+    </div>
+    {% elif pr.central_comment %}
+    <div class="form-card mb-4">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-chat-left-text text-success"></i>
+        <span>تعليق الإدارة</span>
+      </h5>
+      <div class="form-control bg-light" style="min-height: 120px; white-space: pre-wrap;">
+        {{ pr.central_comment }}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="form-card">
+      <h5 class="section-title d-flex align-items-center gap-2">
+        <i class="bi bi-paperclip text-success"></i>
+        <span>المرفقات</span>
+      </h5>
+
+      {% if pr.attachments %}
+        <div class="d-flex flex-column gap-2">
+          {% for attachment in pr.attachments %}
+          <a class="btn btn-light border text-start"
+             href="{{ url_for('missions.attachment', filename=attachment.stored_name) }}">
+            <i class="bi bi-paperclip"></i>
+            <span>{{ attachment.original_name }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-muted">لا توجد مرفقات.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
