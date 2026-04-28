@@ -16,7 +16,8 @@ from ...models import (
     MISSION_CLASSIFICATIONS, PRIORITY_LEVELS, ASSIGNMENT_MODES,
     AuditLog,
     MISSION_CLASSIFICATION_LABELS, PRIORITY_LEVEL_LABELS,
-    MISSION_STATUS_LABELS, ASSIGNMENT_MODE_LABELS
+    MISSION_STATUS_LABELS, ASSIGNMENT_MODE_LABELS,
+    MISSION_REGION_STATUS_LABELS, MISSION_PRISON_REPORT_STATUS_LABELS
 )
 
 missions_bp = Blueprint('missions', __name__, url_prefix='/missions')
@@ -33,6 +34,24 @@ def _score_options():
 
 def _normalize_text(value):
     return ' '.join((value or '').strip().split())
+
+
+def _commitment_badge(due_date, status):
+    if not due_date:
+        return {'label': 'غير محدد', 'class': 'badge-neutral'}
+
+    if status == 'submitted':
+        return {'label': 'ملتزم', 'class': 'badge-risk-low'}
+
+    remaining = (due_date - date.today()).days
+
+    if remaining < 0:
+        return {'label': 'متأخر', 'class': 'badge-risk-critical'}
+
+    if remaining <= 3:
+        return {'label': 'قريب الاستحقاق', 'class': 'badge-risk-med'}
+
+    return {'label': 'ضمن المدة', 'class': 'badge-status'}
 
 
 @missions_bp.route('/')
@@ -417,7 +436,7 @@ def create():
 def detail(mission_id):
     mission = Mission.query.options(
         joinedload(Mission.template).joinedload(Template.sections).joinedload(TemplateSection.criteria),
-        joinedload(Mission.regions).joinedload(MissionRegion.region),
+        joinedload(Mission.regions).joinedload(MissionRegion.region).joinedload(Region.prisons),
         joinedload(Mission.regions).joinedload(MissionRegion.prison_reports).joinedload(MissionPrisonReport.prison),
         joinedload(Mission.regions).joinedload(MissionRegion.prison_reports).joinedload(MissionPrisonReport.assignees),
         joinedload(Mission.regions).joinedload(MissionRegion.prison_reports).joinedload(MissionPrisonReport.observations)
@@ -434,13 +453,188 @@ def detail(mission_id):
         ((AuditLog.entity_type == 'observation') & (AuditLog.entity_id.in_(observation_ids)))
     ).order_by(AuditLog.created_at.desc()).limit(80).all()
 
+    summary_kpis = {
+        'regions_count': len(mission.regions),
+        'prisons_count': sum(len(mr.prison_reports) for mr in mission.regions),
+        'started_count': sum(mr.started_prisons_count for mr in mission.regions),
+        'submitted_count': sum(mr.completed_prisons_count for mr in mission.regions),
+        'open_observations_count': sum(mr.open_observations_count() for mr in mission.regions),
+        'compliance_percentage': 0
+    }
+
+    if summary_kpis['prisons_count'] > 0:
+        summary_kpis['compliance_percentage'] = round(
+            (summary_kpis['submitted_count'] / summary_kpis['prisons_count']) * 100,
+            1
+        )
+
+    region_summaries = []
+    region_setup_data = {}
+
+    for mr in mission.regions:
+        region_summaries.append({
+            'id': mr.id,
+            'name': mr.region.name
+        })
+
+        selected_prison_ids = [str(pr.prison_id) for pr in mr.prison_reports]
+        selected_assignee_ids = sorted({
+            str(user.id)
+            for pr in mr.prison_reports
+            for user in pr.assignees
+        })
+
+        users = User.query.filter(
+            User.role == 'executor',
+            User.is_active_user == True,
+            db.or_(User.region_id == mr.region_id, User.org_unit_type == 'central')
+        ).order_by(User.full_name).all()
+
+        region_setup_data[str(mr.id)] = {
+            'prisons': [{'id': p.id, 'name': p.name} for p in mr.region.prisons],
+            'selected_prison_ids': selected_prison_ids,
+            'selected_assignee_ids': selected_assignee_ids,
+            'region_notes': mr.region_notes or '',
+            'users': [
+                {
+                    'id': u.id,
+                    'name': u.full_name,
+                    'meta': u.job_title or ROLE_LABELS.get(u.role, u.role)
+                }
+                for u in users
+            ]
+        }
+
     return render_template(
         'missions/detail.html',
         mission=mission,
-        mission_classifications=MISSION_CLASSIFICATIONS,
-        priority_levels=PRIORITY_LEVELS,
-        entity_logs=entity_logs
+        entity_logs=entity_logs,
+        summary_kpis=summary_kpis,
+        region_summaries=region_summaries,
+        region_setup_data=region_setup_data
     )
+
+
+@missions_bp.route('/prison-report/<int:prison_report_id>/view', methods=['GET', 'POST'])
+@login_required
+def prison_report_view(prison_report_id):
+    pr = MissionPrisonReport.query.options(
+        joinedload(MissionPrisonReport.mission_region).joinedload(MissionRegion.region),
+        joinedload(MissionPrisonReport.mission_region).joinedload(MissionRegion.mission).joinedload(Mission.template).joinedload(Template.sections).joinedload(TemplateSection.criteria),
+        joinedload(MissionPrisonReport.prison),
+        joinedload(MissionPrisonReport.assignees),
+        joinedload(MissionPrisonReport.responses).joinedload(MissionResponse.criterion),
+        joinedload(MissionPrisonReport.observations).joinedload(Observation.department),
+        joinedload(MissionPrisonReport.attachments)
+    ).get_or_404(prison_report_id)
+
+    can_comment = current_user.role in ['central_admin', 'central_operator', 'central_director']
+
+    if request.method == 'POST':
+        if not can_comment:
+            flash('لا تملك صلاحية إضافة تعليق.', 'danger')
+            return redirect(url_for('missions.prison_report_view', prison_report_id=pr.id))
+
+        pr.central_comment = (request.form.get('central_comment') or '').strip() or None
+        pr.central_commented_at = datetime.utcnow()
+
+        log_action(
+            current_user.id,
+            'add_central_comment',
+            'mission_prison_report',
+            pr.id,
+            'إضافة تعليق على تقرير السجن'
+        )
+        db.session.commit()
+
+        flash('تم حفظ التعليق.', 'success')
+        return redirect(url_for('missions.prison_report_view', prison_report_id=pr.id))
+
+    return render_template(
+        'missions/prison_report_view.html',
+        pr=pr,
+        can_comment=can_comment
+    )
+
+
+@missions_bp.route('/region/<int:mission_region_id>/setup-inline', methods=['POST'])
+@login_required
+@roles_required('region_manager', 'central_admin', 'central_operator', 'central_director')
+def region_setup_inline(mission_region_id):
+    mr = MissionRegion.query.options(
+        joinedload(MissionRegion.region).joinedload(Region.prisons),
+        joinedload(MissionRegion.prison_reports).joinedload(MissionPrisonReport.assignees)
+    ).get_or_404(mission_region_id)
+
+    if current_user.role == 'region_manager' and current_user.region_id != mr.region_id:
+        flash('لا يمكن الوصول إلى هذه المنطقة.', 'danger')
+        return redirect(url_for('missions.detail', mission_id=mr.mission_id))
+
+    selected_prison_ids = request.form.getlist('prison_ids')
+    selected_assignee_ids = request.form.getlist('assignee_ids')
+
+    if not selected_prison_ids:
+        flash('يجب اختيار سجن واحد على الأقل.', 'danger')
+        return redirect(url_for('missions.detail', mission_id=mr.mission_id))
+
+    selected_users = []
+    for uid in selected_assignee_ids:
+        user = db.session.get(User, int(uid))
+        if user:
+            selected_users.append(user)
+
+    existing_reports_by_prison = {r.prison_id: r for r in mr.prison_reports}
+
+    for report in list(mr.prison_reports):
+        if str(report.prison_id) not in selected_prison_ids:
+            db.session.delete(report)
+
+    for pid in selected_prison_ids:
+        prison_id = int(pid)
+        prison = db.session.get(Prison, prison_id)
+        if not prison:
+            continue
+
+        if prison_id in existing_reports_by_prison:
+            report = existing_reports_by_prison[prison_id]
+        else:
+            report = MissionPrisonReport(
+                mission_region=mr,
+                prison=prison
+            )
+            db.session.add(report)
+
+        report.assignees = selected_users
+        report.status = 'assigned' if selected_users else 'pending_assignment'
+
+    mr.region_notes = request.form.get('region_notes') or None
+    mr.status = 'assigned' if selected_users else 'pending_region_setup'
+
+    db.session.flush()
+    log_action(current_user.id, 'setup_region_task', 'mission_region', mr.id, 'تحديث تجهيز المنطقة من صفحة تفاصيل المهمة')
+    db.session.commit()
+
+    flash('تم حفظ تجهيز المنطقة.', 'success')
+    return redirect(url_for('missions.detail', mission_id=mr.mission_id))
+
+
+@missions_bp.route('/<int:mission_id>/history')
+@login_required
+def history(mission_id):
+    mission = Mission.query.get_or_404(mission_id)
+
+    region_ids = [mr.id for mr in mission.regions] or [0]
+    prison_report_ids = [pr.id for mr in mission.regions for pr in mr.prison_reports] or [0]
+    observation_ids = [o.id for mr in mission.regions for pr in mr.prison_reports for o in pr.observations] or [0]
+
+    logs = AuditLog.query.filter(
+        ((AuditLog.entity_type == 'mission') & (AuditLog.entity_id == mission.id)) |
+        ((AuditLog.entity_type == 'mission_region') & (AuditLog.entity_id.in_(region_ids))) |
+        ((AuditLog.entity_type == 'mission_prison_report') & (AuditLog.entity_id.in_(prison_report_ids))) |
+        ((AuditLog.entity_type == 'observation') & (AuditLog.entity_id.in_(observation_ids)))
+    ).order_by(AuditLog.created_at.desc()).all()
+
+    return render_template('missions/history.html', mission=mission, logs=logs)
 
 
 @missions_bp.route('/region/<int:mission_region_id>/setup', methods=['GET', 'POST'])
@@ -741,10 +935,17 @@ def central_review(mission_id):
         joinedload(Mission.regions).joinedload(MissionRegion.prison_reports).joinedload(MissionPrisonReport.observations)
     ).get_or_404(mission_id)
 
+    central_kpis = {
+        'regions_count': len(mission.regions),
+        'prisons_count': sum(len(mr.prison_reports) for mr in mission.regions),
+        'submitted_regions_count': sum(1 for mr in mission.regions if mr.status == 'submitted_to_central'),
+        'open_observations_count': sum(mr.open_observations_count() for mr in mission.regions),
+    }
+
     if request.method == 'POST':
-        mission.final_summary = request.form.get('final_summary')
-        mission.final_recommendations = request.form.get('final_recommendations')
-        mission.internal_audit_opinion = request.form.get('internal_audit_opinion')
+        mission.final_summary = (request.form.get('final_summary') or '').strip() or None
+        mission.final_recommendations = (request.form.get('final_recommendations') or '').strip() or None
+        mission.internal_audit_opinion = (request.form.get('internal_audit_opinion') or '').strip() or None
 
         action = request.form.get('central_action')
         if action == 'send_dg':
@@ -758,10 +959,14 @@ def central_review(mission_id):
         log_action(current_user.id, 'central_review_mission', 'mission', mission.id, f'إجراء: {action}')
         db.session.commit()
 
-        flash('تم تحديث المراجعة المركزية.', 'success')
+        flash('تم تحديث التقرير الختامي بنجاح.', 'success')
         return redirect(url_for('missions.central_review', mission_id=mission.id))
 
-    return render_template('missions/central_review.html', mission=mission)
+    return render_template(
+        'missions/central_review.html',
+        mission=mission,
+        central_kpis=central_kpis
+    )
 
 
 @missions_bp.route('/<int:mission_id>/dg-review', methods=['GET', 'POST'])
